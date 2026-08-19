@@ -1,0 +1,13 @@
+{
+  "name": "8bitxato",
+  "version": "1.1.0",
+  "description": "Mixer 8-bit per comporre loop chiptune",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "npx --yes serve . -l 3000",
+    "dev": "npx --yes serve . -l 3000",
+    "test": "node --test test/*.js"
+  },
+  "license": "MIT"
+}

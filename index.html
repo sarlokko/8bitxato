@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>8BITXATO — mixer chiptune</title>
+  <meta name="description" content="Componi loop 8-bit nel browser: lead, basso, kick, snare e hat. Xato balla sul beat.">
+  <meta name="theme-color" content="#7cff6b">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="site.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="crt"></div>
+  <header class="top">
+    <div class="brand">
+      <img id="xato" class="xato" src="favicon.svg" alt="Xato" width="72" height="72">
+      <div>
+        <p class="tag">v1.1 · 16 step</p>
+        <h1>8BITXATO</h1>
+        <p class="sub">Componi un loop chiptune. Spazio = play/stop.</p>
+      </div>
+    </div>
+    <div class="transport">
+      <button type="button" id="play" class="play">PLAY</button>
+      <label class="bpm-wrap">
+        BPM
+        <input id="bpm" type="range" min="60" max="200" value="120">
+        <strong id="bpm-value">120</strong>
+      </label>
+      <label class="bpm-wrap">
+        SWING
+        <input id="swing" type="range" min="0" max="50" value="0">
+        <strong id="swing-value">0</strong>
+      </label>
+      <label class="bpm-wrap">
+        MASTER
+        <input id="master" type="range" min="0" max="100" value="85">
+      </label>
+    </div>
+  </header>
+
+  <section class="toolbar">
+    <button type="button" id="random">RANDOM</button>
+    <button type="button" id="clear">CLEAR</button>
+    <button type="button" id="duplicate">DUPLICA 8</button>
+    <button type="button" data-preset="boing">PRESET BOING</button>
+    <button type="button" data-preset="boss">PRESET BOSS</button>
+    <button type="button" data-preset="nanna">PRESET NANNA</button>
+    <button type="button" id="copy-link">COPIA LINK</button>
+    <button type="button" id="export">ESPORTA</button>
+    <label class="import">
+      IMPORTA
+      <input id="import" type="file" accept="application/json,.txt">
+    </label>
+  </section>
+
+  <div class="legend">
+    <span>Clicca o trascina una casella per mettere (o togliere) una nota.</span>
+    <span>Una sola nota per colonna su lead e basso.</span>
+  </div>
+
+  <div class="board">
+    <div id="step-numbers" class="step-numbers"></div>
+    <main id="grid" class="grid"></main>
+  </div>
+
+  <footer>
+    <p>8BITXATO — mixer 8-bit nel browser. Il pattern si salva da solo. Xato è il gatto.</p>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
