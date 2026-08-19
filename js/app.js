@@ -170,7 +170,14 @@ function syncTransport() {
   el("play").textContent = seq.playing ? "STOP" : "PLAY";
   el("play").classList.toggle("playing", seq.playing);
   el("xato").classList.toggle("playing", seq.playing);
+  syncKits();
   syncUndo();
+}
+
+function syncKits() {
+  document.querySelectorAll("[data-kit]").forEach((btn) => {
+    btn.classList.toggle("on", btn.dataset.kit === seq.pattern.kit);
+  });
 }
 
 function syncUndo() {
@@ -325,6 +332,14 @@ function bind() {
   });
 
   el("undo").addEventListener("click", doUndo);
+
+  document.querySelectorAll("[data-kit]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      seq.setKit(btn.dataset.kit);
+      syncKits();
+      syncUndo();
+    });
+  });
 
   document.querySelectorAll("[data-preset]").forEach((btn) => {
     btn.addEventListener("click", () => {

@@ -13,6 +13,7 @@ Apri http://localhost:3000
 - **Lead** e **basso**: clicca (o trascina) una casella per mettere una nota (una sola per colonna)
 - **Kick / snare / hat**: accendi o spegni il colpo
 - Ogni click suona subito la nota
+- **CHIP** sceglie la sonorità 8-bit: CLASSICO (default), NES, BOY, SALA, NOTTE
 - **PLAY** o barra spaziatrice per ascoltare
 - **Xato** balla sul beat quando il loop gira
 - **UNDO** o Ctrl+Z
@@ -23,6 +24,8 @@ Apri http://localhost:3000
 
 ## Tracce
 
+Sul kit **CLASSICO** (i suoni originali):
+
 | Traccia | Suono |
 |---------|--------|
 | LEAD | onda quadra |
@@ -30,6 +33,8 @@ Apri http://localhost:3000
 | KICK | tom 8-bit con pitch drop |
 | SNARE | rumore + click |
 | HAT | rumore corto |
+
+Gli altri kit restano 8-bit: **NES** pulse 25%, **BOY** pulse sottile, **SALA** arcade, **NOTTE** triangolo morbido.
 
 ## Test
 

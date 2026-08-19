@@ -1,4 +1,12 @@
-import { ChipSynth, LEAD_NOTES, BASS_NOTES, DEFAULT_VOLUMES, DEFAULT_MUTED } from "./synth.js";
+import {
+  ChipSynth,
+  LEAD_NOTES,
+  BASS_NOTES,
+  DEFAULT_KIT,
+  DEFAULT_MUTED,
+  DEFAULT_VOLUMES,
+  resolveKit,
+} from "./synth.js";
 
 const STEPS = 16;
 const STORAGE_KEY = "8bitxato-pattern";
@@ -17,6 +25,7 @@ function emptyPattern() {
     hat: Array(STEPS).fill(false),
     volumes: { ...DEFAULT_VOLUMES },
     muted: { ...DEFAULT_MUTED },
+    kit: DEFAULT_KIT,
   };
 }
 
@@ -47,6 +56,7 @@ function normalizePattern(raw) {
     hat: padDrums(raw.hat),
     volumes: { ...DEFAULT_VOLUMES, ...(raw.volumes || {}) },
     muted: { ...DEFAULT_MUTED, ...(raw.muted || {}) },
+    kit: resolveKit(raw.kit),
   };
 }
 
@@ -77,6 +87,7 @@ export function encodePattern(pattern) {
     packDrums(p.kick),
     packDrums(p.snare),
     packDrums(p.hat),
+    p.kit,
   ].join("|");
 }
 
@@ -94,6 +105,7 @@ export function decodePattern(text) {
     kick: unpackDrums(parts[5]).map(Boolean),
     snare: unpackDrums(parts[6]).map(Boolean),
     hat: unpackDrums(parts[7]).map(Boolean),
+    kit: parts[8],
   });
 }
 
@@ -193,6 +205,7 @@ export class Sequencer {
   applyMix() {
     this.synth.volumes = { ...DEFAULT_VOLUMES, ...this.pattern.volumes };
     this.synth.muted = { ...DEFAULT_MUTED, ...this.pattern.muted };
+    this.synth.setKit(this.pattern.kit);
   }
 
   snapshot() {
@@ -267,17 +280,39 @@ export class Sequencer {
     this.save();
   }
 
+  setKit(id) {
+    const kit = resolveKit(id);
+    if (kit === this.pattern.kit) {
+      this.synth.setKit(kit);
+      return kit;
+    }
+    this.pushUndo();
+    this.pattern.kit = kit;
+    this.synth.setKit(kit);
+    this.save();
+    if (typeof AudioContext === "function") {
+      try {
+        this.audition("lead", "C5");
+      } catch {
+        /* no audio graph in tests */
+      }
+    }
+    return kit;
+  }
+
   clear() {
     this.pushUndo();
     const bpm = this.pattern.bpm;
     const swing = this.pattern.swing;
     const volumes = { ...this.pattern.volumes };
     const muted = { ...this.pattern.muted };
+    const kit = this.pattern.kit;
     this.pattern = emptyPattern();
     this.pattern.bpm = bpm;
     this.pattern.swing = swing;
     this.pattern.volumes = volumes;
     this.pattern.muted = muted;
+    this.pattern.kit = kit;
     this.save();
   }
 
@@ -306,9 +341,11 @@ export class Sequencer {
     this.pushUndo();
     const volumes = { ...this.pattern.volumes };
     const muted = { ...this.pattern.muted };
+    const kit = this.pattern.kit;
     this.pattern = normalizePattern(structuredClone(preset));
     this.pattern.volumes = volumes;
     this.pattern.muted = muted;
+    this.pattern.kit = kit;
     this.save();
   }
 
