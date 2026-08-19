@@ -8,10 +8,11 @@ import {
   resolveKit,
 } from "./synth.js";
 
-const STEPS = 16;
+const BAR_STEPS = 16;
+const STEPS = 32;
 const STORAGE_KEY = "8bitxato-pattern";
 const NOTE_TRACKS = ["lead", "bass"];
-const DRUM_TRACKS = ["kick", "snare", "hat"];
+const DRUM_TRACKS = ["kick", "snare", "hat", "tom"];
 const UNDO_LIMIT = 40;
 
 function emptyPattern() {
@@ -23,24 +24,45 @@ function emptyPattern() {
     kick: Array(STEPS).fill(false),
     snare: Array(STEPS).fill(false),
     hat: Array(STEPS).fill(false),
+    tom: Array(STEPS).fill(false),
     volumes: { ...DEFAULT_VOLUMES },
     muted: { ...DEFAULT_MUTED },
     kit: DEFAULT_KIT,
   };
 }
 
-function padNotes(arr) {
+function stretchNotes(arr) {
   const next = Array(STEPS).fill(null);
-  if (!Array.isArray(arr)) return next;
-  for (let i = 0; i < STEPS; i++) next[i] = arr[i] || null;
+  if (!Array.isArray(arr) || arr.length === 0) return next;
+  const src = arr.map((n) => n || null);
+  if (src.length <= BAR_STEPS) {
+    for (let i = 0; i < BAR_STEPS; i++) {
+      next[i] = src[i] || null;
+      next[i + BAR_STEPS] = src[i] || null;
+    }
+    return next;
+  }
+  for (let i = 0; i < STEPS; i++) next[i] = src[i] || null;
   return next;
 }
 
-function padDrums(arr) {
+function stretchDrums(arr) {
   const next = Array(STEPS).fill(false);
-  if (!Array.isArray(arr)) return next;
-  for (let i = 0; i < STEPS; i++) next[i] = Boolean(arr[i]);
+  if (!Array.isArray(arr) || arr.length === 0) return next;
+  const src = arr.map(Boolean);
+  if (src.length <= BAR_STEPS) {
+    for (let i = 0; i < BAR_STEPS; i++) {
+      next[i] = Boolean(src[i]);
+      next[i + BAR_STEPS] = Boolean(src[i]);
+    }
+    return next;
+  }
+  for (let i = 0; i < STEPS; i++) next[i] = Boolean(src[i]);
   return next;
+}
+
+function twoBars(first, second) {
+  return [...first, ...second];
 }
 
 function normalizePattern(raw) {
@@ -49,11 +71,12 @@ function normalizePattern(raw) {
   return {
     bpm: Math.min(200, Math.max(60, Number(raw.bpm) || 120)),
     swing: Math.min(50, Math.max(0, Number(raw.swing) || 0)),
-    lead: padNotes(raw.lead),
-    bass: padNotes(raw.bass),
-    kick: padDrums(raw.kick),
-    snare: padDrums(raw.snare),
-    hat: padDrums(raw.hat),
+    lead: stretchNotes(raw.lead),
+    bass: stretchNotes(raw.bass),
+    kick: stretchDrums(raw.kick),
+    snare: stretchDrums(raw.snare),
+    hat: stretchDrums(raw.hat),
+    tom: stretchDrums(raw.tom),
     volumes: { ...DEFAULT_VOLUMES, ...(raw.volumes || {}) },
     muted: { ...DEFAULT_MUTED, ...(raw.muted || {}) },
     kit: resolveKit(raw.kit),
@@ -65,7 +88,7 @@ function packNotes(arr) {
 }
 
 function unpackNotes(str) {
-  return padNotes(String(str || "").split("."));
+  return stretchNotes(String(str || "").split("."));
 }
 
 function packDrums(arr) {
@@ -73,7 +96,7 @@ function packDrums(arr) {
 }
 
 function unpackDrums(str) {
-  return padDrums([...(String(str || ""))].map((c) => c === "1"));
+  return stretchDrums([...(String(str || ""))].map((c) => c === "1"));
 }
 
 export function encodePattern(pattern) {
@@ -88,6 +111,7 @@ export function encodePattern(pattern) {
     packDrums(p.snare),
     packDrums(p.hat),
     p.kit,
+    packDrums(p.tom),
   ].join("|");
 }
 
@@ -106,6 +130,7 @@ export function decodePattern(text) {
     snare: unpackDrums(parts[6]).map(Boolean),
     hat: unpackDrums(parts[7]).map(Boolean),
     kit: parts[8],
+    tom: unpackDrums(parts[9] || ""),
   });
 }
 
@@ -143,47 +168,133 @@ export const PRESETS = {
   boing: {
     bpm: 118,
     swing: 8,
-    lead: ["C5", null, "E4", null, "G4", null, "A4", "G4", "C5", null, "E4", null, "D4", "E4", "G4", null],
-    bass: ["C2", null, null, "C2", "G2", null, null, "G2", "A2", null, null, "A2", "G2", null, "E2", null],
-    kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0].map(Boolean),
-    snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1].map(Boolean),
-    hat: [1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0].map(Boolean),
+    lead: twoBars(
+      ["C5", null, "E4", null, "G4", null, "A4", "G4", "C5", null, "E4", null, "D4", "E4", "G4", null],
+      ["E4", null, "G4", "A4", "C5", null, "A4", "G4", "E4", null, "D4", "E4", "G4", "A4", "C5", null]
+    ),
+    bass: twoBars(
+      ["C2", null, null, "C2", "G2", null, null, "G2", "A2", null, null, "A2", "G2", null, "E2", null],
+      ["C2", null, "C2", null, "A2", null, null, "A2", "G2", null, "G2", "E2", "C2", null, "G2", null]
+    ),
+    kick: twoBars(
+      [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0],
+      [1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1]
+    ).map(Boolean),
+    snare: twoBars(
+      [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+      [0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1]
+    ).map(Boolean),
+    hat: twoBars(
+      [1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0],
+      [1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0]
+    ).map(Boolean),
+    tom: twoBars(
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0]
+    ).map(Boolean),
   },
   boss: {
     bpm: 140,
     swing: 0,
-    lead: ["G4", "G4", null, "A4", "C5", null, "A4", null, "G4", "E4", null, "D4", "E4", "G4", "A4", null],
-    bass: ["E2", null, "E2", "E2", "G2", null, "G2", null, "A2", null, "A2", "A2", "C3", null, "G2", null],
-    kick: [1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1].map(Boolean),
-    snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0].map(Boolean),
-    hat: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1].map(Boolean),
+    lead: twoBars(
+      ["G4", "G4", null, "A4", "C5", null, "A4", null, "G4", "E4", null, "D4", "E4", "G4", "A4", null],
+      ["C5", "C5", "A4", "G4", null, "A4", "C5", null, "D4", "E4", "G4", "A4", "G4", "E4", "D4", "E4"]
+    ),
+    bass: twoBars(
+      ["E2", null, "E2", "E2", "G2", null, "G2", null, "A2", null, "A2", "A2", "C3", null, "G2", null],
+      ["E2", "E2", null, "G2", "A2", null, "A2", "A2", "C3", null, "C3", "G2", "E2", "E2", "G2", "A2"]
+    ),
+    kick: twoBars(
+      [1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1],
+      [1, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1]
+    ).map(Boolean),
+    snare: twoBars(
+      [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+      [0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0]
+    ).map(Boolean),
+    hat: Array(STEPS).fill(true),
+    tom: twoBars(
+      [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+      [0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 1]
+    ).map(Boolean),
   },
   nanna: {
     bpm: 88,
     swing: 18,
-    lead: ["C4", null, "E4", null, "G4", null, "A4", null, "G4", null, "E4", null, "D4", "C4", null, null],
-    bass: ["C2", null, null, null, "G2", null, null, null, "A2", null, null, null, "G2", null, null, null],
-    kick: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0].map(Boolean),
+    lead: twoBars(
+      ["C4", null, "E4", null, "G4", null, "A4", null, "G4", null, "E4", null, "D4", "C4", null, null],
+      ["E4", null, "G4", null, "A4", null, "C5", null, "A4", null, "G4", "E4", "D4", "C4", null, null]
+    ),
+    bass: twoBars(
+      ["C2", null, null, null, "G2", null, null, null, "A2", null, null, null, "G2", null, null, null],
+      ["A1", null, null, null, "E2", null, null, null, "G2", null, null, null, "C2", null, null, null]
+    ),
+    kick: twoBars(
+      [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+      [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+    ).map(Boolean),
     snare: Array(STEPS).fill(false),
-    hat: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0].map(Boolean),
+    hat: twoBars(
+      [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0],
+      [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0]
+    ).map(Boolean),
+    tom: twoBars(
+      Array(BAR_STEPS).fill(0),
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0]
+    ).map(Boolean),
   },
   miao: {
     bpm: 104,
     swing: 14,
-    lead: ["E4", null, "G4", "A4", null, "G4", "E4", null, "C5", null, "A4", "G4", null, "E4", "C4", null],
-    bass: ["A1", null, null, "A1", "E2", null, null, "E2", "A2", null, "G2", null, "E2", null, "A1", null],
-    kick: [1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0].map(Boolean),
-    snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0].map(Boolean),
-    hat: [1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0].map(Boolean),
+    lead: twoBars(
+      ["E4", null, "G4", "A4", null, "G4", "E4", null, "C5", null, "A4", "G4", null, "E4", "C4", null],
+      ["G4", "A4", "C5", null, "A4", "G4", "E4", null, "D4", "E4", "G4", "A4", "G4", "E4", "C4", "E4"]
+    ),
+    bass: twoBars(
+      ["A1", null, null, "A1", "E2", null, null, "E2", "A2", null, "G2", null, "E2", null, "A1", null],
+      ["A1", null, "A1", null, "G2", null, null, "E2", "A2", "A2", null, "G2", "E2", null, "A1", "E2"]
+    ),
+    kick: twoBars(
+      [1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0],
+      [1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0]
+    ).map(Boolean),
+    snare: twoBars(
+      [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0],
+      [0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 1]
+    ).map(Boolean),
+    hat: twoBars(
+      [1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0],
+      [1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1]
+    ).map(Boolean),
+    tom: twoBars(
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+      [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1]
+    ).map(Boolean),
   },
   rincorsa: {
     bpm: 168,
     swing: 0,
-    lead: ["E4", "G4", "A4", "C5", "A4", "G4", "E4", "D4", "E4", "G4", "A4", "C5", "D4", "E4", "G4", "A4"],
-    bass: ["E2", "E2", null, "E2", "G2", "G2", null, "G2", "A2", "A2", null, "A2", "C3", null, "G2", null],
-    kick: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1].map(Boolean),
-    snare: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1].map(Boolean),
-    hat: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1].map(Boolean),
+    lead: twoBars(
+      ["E4", "G4", "A4", "C5", "A4", "G4", "E4", "D4", "E4", "G4", "A4", "C5", "D4", "E4", "G4", "A4"],
+      ["C5", "A4", "G4", "E4", "G4", "A4", "C5", "D4", "C5", "A4", "G4", "E4", "D4", "E4", "G4", "C5"]
+    ),
+    bass: twoBars(
+      ["E2", "E2", null, "E2", "G2", "G2", null, "G2", "A2", "A2", null, "A2", "C3", null, "G2", null],
+      ["E2", null, "E2", "G2", "A2", "A2", null, "C3", "A2", null, "G2", "E2", "G2", "A2", "C3", "E2"]
+    ),
+    kick: twoBars(
+      [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1],
+      [1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1]
+    ).map(Boolean),
+    snare: twoBars(
+      [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1],
+      [0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1]
+    ).map(Boolean),
+    hat: Array(STEPS).fill(true),
+    tom: twoBars(
+      [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+      [0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1]
+    ).map(Boolean),
   },
 };
 
@@ -239,6 +350,21 @@ export class Sequencer {
     const swing = (this.pattern.swing || 0) / 100;
     if (step % 2 === 0) return sixteenth * (1 + swing);
     return sixteenth * (1 - swing);
+  }
+
+  holdLength(track, step) {
+    const note = this.pattern[track][step];
+    if (!note) return 0;
+    if (step > 0 && this.pattern[track][step - 1] === note) return 0;
+    let n = 1;
+    while (step + n < STEPS && this.pattern[track][step + n] === note) n++;
+    return n;
+  }
+
+  holdDuration(step, count) {
+    let dur = 0;
+    for (let i = 0; i < count; i++) dur += this.stepDuration(step + i);
+    return dur;
   }
 
   setDrum(track, step, on) {
@@ -316,10 +442,19 @@ export class Sequencer {
     this.save();
   }
 
-  duplicate8() {
+  duplicate8(bar = 0) {
+    this.pushUndo();
+    const start = bar * BAR_STEPS;
+    for (const key of [...NOTE_TRACKS, ...DRUM_TRACKS]) {
+      for (let i = 0; i < 8; i++) this.pattern[key][start + i + 8] = this.pattern[key][start + i];
+    }
+    this.save();
+  }
+
+  duplicate16() {
     this.pushUndo();
     for (const key of [...NOTE_TRACKS, ...DRUM_TRACKS]) {
-      for (let i = 0; i < 8; i++) this.pattern[key][i + 8] = this.pattern[key][i];
+      for (let i = 0; i < BAR_STEPS; i++) this.pattern[key][i + BAR_STEPS] = this.pattern[key][i];
     }
     this.save();
   }
@@ -332,6 +467,7 @@ export class Sequencer {
     this.pattern.kick = Array.from({ length: STEPS }, (_, i) => i % 4 === 0);
     this.pattern.snare = Array.from({ length: STEPS }, (_, i) => i % 8 === 4);
     this.pattern.hat = Array.from({ length: STEPS }, (_, i) => i % 2 === 0);
+    this.pattern.tom = Array.from({ length: STEPS }, (_, i) => i % 16 === 10);
     this.save();
   }
 
@@ -360,6 +496,7 @@ export class Sequencer {
     else if (track === "kick") this.synth.kick(time);
     else if (track === "snare") this.synth.snare(time);
     else if (track === "hat") this.synth.hat(time);
+    else if (track === "tom") this.synth.tom(time);
     this.synth.muted[track] = muted;
     this.synth.solo = solo;
   }
@@ -403,12 +540,15 @@ export class Sequencer {
     }, delay);
 
     const p = this.pattern;
-    const dur = this.stepDuration(step);
     if (p.kick[step]) this.synth.kick(time);
     if (p.snare[step]) this.synth.snare(time);
     if (p.hat[step]) this.synth.hat(time);
-    if (p.lead[step]) this.synth.note("lead", p.lead[step], time, dur);
-    if (p.bass[step]) this.synth.note("bass", p.bass[step], time, dur);
+    if (p.tom[step]) this.synth.tom(time);
+
+    const leadHold = this.holdLength("lead", step);
+    if (leadHold) this.synth.note("lead", p.lead[step], time, this.holdDuration(step, leadHold));
+    const bassHold = this.holdLength("bass", step);
+    if (bassHold) this.synth.note("bass", p.bass[step], time, this.holdDuration(step, bassHold));
   }
 
   save() {
@@ -453,4 +593,4 @@ export class Sequencer {
   }
 }
 
-export { STEPS, emptyPattern, normalizePattern, NOTE_TRACKS, DRUM_TRACKS };
+export { STEPS, BAR_STEPS, emptyPattern, normalizePattern, NOTE_TRACKS, DRUM_TRACKS };

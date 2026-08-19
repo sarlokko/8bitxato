@@ -1,4 +1,4 @@
-import { Sequencer, STEPS } from "./sequencer.js";
+import { Sequencer, STEPS, BAR_STEPS } from "./sequencer.js";
 import { LEAD_NOTES, BASS_NOTES } from "./synth.js";
 
 const seq = new Sequencer(highlightStep);
@@ -8,9 +8,10 @@ const tracks = [
   { id: "kick", label: "KICK", kind: "drum" },
   { id: "snare", label: "SNARE", kind: "drum" },
   { id: "hat", label: "HAT", kind: "drum" },
+  { id: "tom", label: "TOM", kind: "drum" },
 ];
 
-const DRUM_KEYS = { KeyZ: "kick", KeyX: "snare", KeyC: "hat" };
+const DRUM_KEYS = { KeyZ: "kick", KeyX: "snare", KeyC: "hat", KeyV: "tom" };
 const LEAD_KEYS = {
   Digit1: "C5",
   Digit2: "A4",
@@ -24,19 +25,29 @@ const LEAD_KEYS = {
 
 let paint = null;
 let sayTimer = null;
+let viewBar = "all";
 
 function el(id) {
   return document.getElementById(id);
 }
 
-function cellClass(track, step, on) {
+function visibleRange() {
+  if (viewBar === "all") return { start: 0, count: STEPS };
+  const bar = Number(viewBar) || 0;
+  return { start: bar * BAR_STEPS, count: BAR_STEPS };
+}
+
+function cellClass(step, on) {
   const beat = step % 4 === 0 ? "beat" : "";
   const bar = step % 8 === 0 ? "bar" : "";
-  return `cell ${on ? "on" : ""} ${beat} ${bar}`.trim();
+  const mid = step === BAR_STEPS ? "mid" : "";
+  return `cell ${on ? "on" : ""} ${beat} ${bar} ${mid}`.trim();
 }
 
 function renderGrid() {
+  const { start, count } = visibleRange();
   const root = el("grid");
+  root.closest(".board")?.classList.toggle("wide", count === STEPS);
   root.innerHTML = tracks
     .map((track) => {
       const mute = seq.synth.muted[track.id] ? "muted" : "";
@@ -50,10 +61,11 @@ function renderGrid() {
                 (note) => `
             <div class="note-row">
               <button type="button" class="note-name" data-preview-track="${track.id}" data-preview-note="${note}">${note}</button>
-              <div class="steps">
-                ${Array.from({ length: STEPS }, (_, i) => {
+              <div class="steps" style="--cols:${count}">
+                ${Array.from({ length: count }, (_, n) => {
+                  const i = start + n;
                   const on = seq.pattern[track.id][i] === note;
-                  return `<button type="button" class="${cellClass(track.id, i, on)}" data-track="${track.id}" data-step="${i}" data-note="${note}"></button>`;
+                  return `<button type="button" class="${cellClass(i, on)}" data-track="${track.id}" data-step="${i}" data-note="${note}"></button>`;
                 }).join("")}
               </div>
             </div>`
@@ -61,10 +73,11 @@ function renderGrid() {
               .join("")
           : `<div class="note-row drum-row">
               <button type="button" class="note-name" data-preview-track="${track.id}">●</button>
-              <div class="steps">
-                ${Array.from({ length: STEPS }, (_, i) => {
+              <div class="steps" style="--cols:${count}">
+                ${Array.from({ length: count }, (_, n) => {
+                  const i = start + n;
                   const on = seq.pattern[track.id][i];
-                  return `<button type="button" class="${cellClass(track.id, i, on)} drum" data-track="${track.id}" data-step="${i}"></button>`;
+                  return `<button type="button" class="${cellClass(i, on)} drum" data-track="${track.id}" data-step="${i}"></button>`;
                 }).join("")}
               </div>
             </div>`;
@@ -89,15 +102,20 @@ function renderGrid() {
     .join("");
 
   renderStepNumbers();
-  highlightStep(seq.playing ? seq.heardStep : -1);
+  syncBars();
+  highlightStep(seq.playing ? seq.heardStep : -1, { skipFollow: true });
   syncUndo();
 }
 
 function renderStepNumbers() {
+  const { start, count } = visibleRange();
   el("step-numbers").innerHTML = `
     <span class="note-name"></span>
-    <div class="steps">
-      ${Array.from({ length: STEPS }, (_, i) => `<span class="step-num ${i % 4 === 0 ? "beat" : ""}">${i + 1}</span>`).join("")}
+    <div class="steps" style="--cols:${count}">
+      ${Array.from({ length: count }, (_, n) => {
+        const i = start + n;
+        return `<span class="step-num ${i % 4 === 0 ? "beat" : ""}" data-step="${i}">${i + 1}</span>`;
+      }).join("")}
     </div>
   `;
 }
@@ -133,19 +151,27 @@ function pulseEq(step) {
     p.snare[step] ? 16 : 5,
     p.hat[step] ? 12 : 4,
     p.bass[step] ? 20 : 7,
-    p.lead[step] ? 22 : 8,
+    p.lead[step] || p.tom[step] ? 22 : 8,
   ];
   [...eq.children].forEach((bar, i) => {
     bar.style.height = `${levels[i] || 4}px`;
   });
 }
 
-function highlightStep(step) {
+function highlightStep(step, { skipFollow = false } = {}) {
+  if (!skipFollow && viewBar !== "all" && step >= 0) {
+    const bar = Math.floor(step / BAR_STEPS);
+    if (String(viewBar) !== String(bar)) {
+      viewBar = bar;
+      renderGrid();
+      return;
+    }
+  }
   document.querySelectorAll(".cell").forEach((cell) => {
     cell.classList.toggle("current", Number(cell.dataset.step) === step);
   });
-  document.querySelectorAll(".step-num").forEach((n, i) => {
-    n.classList.toggle("current", i === step);
+  document.querySelectorAll(".step-num").forEach((n) => {
+    n.classList.toggle("current", Number(n.dataset.step) === step);
   });
 
   const cat = el("xato");
@@ -155,6 +181,7 @@ function highlightStep(step) {
   cat.classList.toggle("kick", playing && Boolean(seq.pattern.kick[step]));
   cat.classList.toggle("sing", playing && Boolean(seq.pattern.lead[step]));
   if (playing && seq.pattern.snare[step]) xatoSay("MIAU");
+  else if (playing && seq.pattern.tom[step]) xatoSay("TOM");
   else if (playing && seq.pattern.kick[step]) xatoSay("PUM");
   else if (playing && seq.pattern.lead[step]) xatoSay("♪");
   if (playing) pulseEq(step);
@@ -171,7 +198,19 @@ function syncTransport() {
   el("play").classList.toggle("playing", seq.playing);
   el("xato").classList.toggle("playing", seq.playing);
   syncKits();
+  syncBars();
   syncUndo();
+}
+
+function syncBars() {
+  document.querySelectorAll("[data-bar]").forEach((btn) => {
+    btn.classList.toggle("on", String(btn.dataset.bar) === String(viewBar));
+  });
+  const label = el("bar-now");
+  if (label) {
+    const bar = seq.playing ? Math.floor(seq.heardStep / BAR_STEPS) + 1 : Number(viewBar) + 1;
+    label.textContent = viewBar === "all" ? "1+2" : `BAR ${Number.isFinite(bar) ? bar : 1}`;
+  }
 }
 
 function syncKits() {
@@ -327,11 +366,24 @@ function bind() {
   });
 
   el("duplicate").addEventListener("click", () => {
-    seq.duplicate8();
+    const bar = viewBar === "all" ? 0 : Number(viewBar) || 0;
+    seq.duplicate8(bar);
+    renderGrid();
+  });
+
+  el("duplicate-bar").addEventListener("click", () => {
+    seq.duplicate16();
     renderGrid();
   });
 
   el("undo").addEventListener("click", doUndo);
+
+  document.querySelectorAll("[data-bar]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      viewBar = btn.dataset.bar === "all" ? "all" : Number(btn.dataset.bar);
+      renderGrid();
+    });
+  });
 
   document.querySelectorAll("[data-kit]").forEach((btn) => {
     btn.addEventListener("click", () => {

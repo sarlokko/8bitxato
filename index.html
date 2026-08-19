@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>8BITXATO — mixer chiptune</title>
-  <meta name="description" content="Componi loop 8-bit nel browser: lead, basso, kick, snare e hat. Xato balla sul beat.">
+  <meta name="description" content="Componi loop 8-bit a 32 step: lead, basso, kick, snare, hat e tom. Xato balla sul beat.">
   <meta name="theme-color" content="#7cff6b">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="manifest" href="site.webmanifest">
@@ -25,9 +25,9 @@
         <span></span><span></span><span></span><span></span><span></span>
       </div>
       <div>
-        <p class="tag">v1.3 · 16 step</p>
+        <p class="tag">v1.4 · 32 step</p>
         <h1>8BITXATO</h1>
-        <p class="sub">Clicca una casella per sentire la nota. Spazio = play.</p>
+        <p class="sub">Due battute, tom e note tenute. Spazio = play.</p>
       </div>
     </div>
     <div class="transport">
@@ -58,11 +58,20 @@
     <button type="button" data-kit="notte" title="Triangolo morbido">NOTTE</button>
   </div>
 
+  <div class="kits bars" role="radiogroup" aria-label="Battute">
+    <span class="kits-label">BARS</span>
+    <button type="button" data-bar="0">BAR 1</button>
+    <button type="button" data-bar="1">BAR 2</button>
+    <button type="button" data-bar="all" class="on">1+2</button>
+    <strong id="bar-now" class="bar-now">1+2</strong>
+  </div>
+
   <section class="toolbar">
     <button type="button" id="undo">UNDO</button>
     <button type="button" id="random">RANDOM</button>
     <button type="button" id="clear">CLEAR</button>
     <button type="button" id="duplicate">DUPLICA 8</button>
+    <button type="button" id="duplicate-bar">DUPLICA 16</button>
     <button type="button" data-preset="boing">BOING</button>
     <button type="button" data-preset="boss">BOSS</button>
     <button type="button" data-preset="nanna">NANNA</button>
@@ -77,8 +86,8 @@
   </section>
 
   <div class="legend">
-    <span>Clicca o trascina. Il suono parte subito.</span>
-    <span>CHIP cambia la sonorità 8-bit · 1–8 lead · Z X C batteria · Ctrl+Z undo</span>
+    <span>Clicca o trascina. Due note uguali di fila si tengono (legato).</span>
+    <span>Z X C V = kick snare hat tom · BAR 1/2 per scrivere una battuta alla volta</span>
   </div>
 
   <div class="board">
