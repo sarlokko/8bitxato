@@ -10,7 +10,7 @@ npm start
 
 Apri http://localhost:3000
 
-- **Lead** e **basso**: clicca (o trascina) una casella per mettere una nota. Due note uguali di fila si tengono.
+- **Lead** e **basso**: clicca (o trascina) una casella per mettere una nota. Ogni step ritocca, anche se l'altezza è la stessa.
 - **Kick / snare / hat / tom**: accendi o spegni il colpo
 - **32 step**: BAR 1, BAR 2 oppure 1+2. DUPLICA 16 copia la prima battuta nella seconda
 - Ogni click suona subito la nota
