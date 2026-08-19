@@ -9,7 +9,7 @@ import {
   encodePattern,
   normalizePattern,
 } from "../js/sequencer.js";
-import { BASS_NOTES, LEAD_NOTES } from "../js/synth.js";
+import { BASS_NOTES, DEFAULT_KIT, LEAD_NOTES } from "../js/synth.js";
 
 describe("pattern codec", () => {
   it("round-trips presets", () => {
@@ -38,6 +38,15 @@ describe("pattern codec", () => {
     assert.equal(decoded.lead[0], "C5");
     assert.equal(decoded.lead[1], null);
     assert.equal(decoded.bpm, 90);
+    assert.equal(decoded.kit, DEFAULT_KIT);
+  });
+
+  it("keeps kit in the share string and defaults old links to classico", () => {
+    const withKit = encodePattern({ ...PRESETS.boing, kit: "nes" });
+    assert.equal(decodePattern(withKit).kit, "nes");
+    const legacy = encodePattern(PRESETS.boing).split("|").slice(0, 8).join("|");
+    assert.equal(decodePattern(legacy).kit, "classico");
+    assert.equal(normalizePattern({ kit: "nope" }).kit, "classico");
   });
 });
 
@@ -87,5 +96,16 @@ describe("sequencer edits", () => {
     assert.equal(seq.pattern.lead[0], null);
     assert.equal(seq.undo(), true);
     assert.equal(seq.pattern.lead[0], "C5");
+  });
+
+  it("switches chip kit", () => {
+    const seq = new Sequencer(() => {});
+    seq.pattern = emptyPattern();
+    assert.equal(seq.pattern.kit, "classico");
+    seq.setKit("boy");
+    assert.equal(seq.pattern.kit, "boy");
+    assert.equal(seq.synth.kitId, "boy");
+    seq.setKit("inventato");
+    assert.equal(seq.pattern.kit, "classico");
   });
 });
