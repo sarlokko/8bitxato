@@ -1,0 +1,16 @@
+{
+  "name": "8BITXATO",
+  "short_name": "8BITXATO",
+  "description": "Mixer chiptune a 16 step nel browser",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#07080d",
+  "theme_color": "#7cff6b",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
