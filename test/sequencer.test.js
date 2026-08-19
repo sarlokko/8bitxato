@@ -69,11 +69,23 @@ describe("sequencer edits", () => {
   });
 
   it("keeps preset notes on the piano roll", () => {
-    for (const note of PRESETS.boing.lead.filter(Boolean)) {
-      assert.ok(LEAD_NOTES.includes(note), note);
+    for (const preset of Object.values(PRESETS)) {
+      for (const note of preset.lead.filter(Boolean)) {
+        assert.ok(LEAD_NOTES.includes(note), note);
+      }
+      for (const note of preset.bass.filter(Boolean)) {
+        assert.ok(BASS_NOTES.includes(note), note);
+      }
     }
-    for (const note of PRESETS.boss.bass.filter(Boolean)) {
-      assert.ok(BASS_NOTES.includes(note), note);
-    }
+  });
+
+  it("undoes a destructive edit", () => {
+    const seq = new Sequencer(() => {});
+    seq.pattern = emptyPattern();
+    seq.setNote("lead", 0, "C5");
+    seq.clear();
+    assert.equal(seq.pattern.lead[0], null);
+    assert.equal(seq.undo(), true);
+    assert.equal(seq.pattern.lead[0], "C5");
   });
 });

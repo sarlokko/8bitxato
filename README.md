@@ -12,8 +12,11 @@ Apri http://localhost:3000
 
 - **Lead** e **basso**: clicca (o trascina) una casella per mettere una nota (una sola per colonna)
 - **Kick / snare / hat**: accendi o spegni il colpo
+- Ogni click suona subito la nota
 - **PLAY** o barra spaziatrice per ascoltare
 - **Xato** balla sul beat quando il loop gira
+- **UNDO** o Ctrl+Z
+- Tastiera: `1–8` lead, `Z X C` kick/snare/hat
 - Il pattern si salva da solo nel browser
 - **COPIA LINK** per condividere il loop (resta nell'URL)
 - **ESPORTA / IMPORTA** per il JSON

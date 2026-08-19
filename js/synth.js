@@ -25,14 +25,26 @@ export const BASS_NOTES = ["C3", "A2", "G2", "E2", "D2", "C2", "A1", "G1"];
 export const DEFAULT_VOLUMES = { lead: 0.22, bass: 0.28, kick: 0.7, snare: 0.35, hat: 0.18 };
 export const DEFAULT_MUTED = { lead: false, bass: false, kick: false, snare: false, hat: false };
 
+function nesPulseWave(ctx, duty) {
+  const size = 32;
+  const real = new Float32Array(size);
+  const imag = new Float32Array(size);
+  for (let k = 1; k < size; k++) {
+    imag[k] = (2 / (k * Math.PI)) * Math.sin(Math.PI * k * duty);
+  }
+  return ctx.createPeriodicWave(real, imag);
+}
+
 export class ChipSynth {
   constructor() {
     this.ctx = null;
     this.master = null;
     this.filter = null;
+    this.pulse25 = null;
     this.masterVolume = 0.85;
     this.volumes = { ...DEFAULT_VOLUMES };
     this.muted = { ...DEFAULT_MUTED };
+    this.solo = null;
   }
 
   ensure() {
@@ -40,11 +52,12 @@ export class ChipSynth {
       this.ctx = new AudioContext();
       this.filter = this.ctx.createBiquadFilter();
       this.filter.type = "lowpass";
-      this.filter.frequency.value = 4200;
+      this.filter.frequency.value = 3800;
       this.master = this.ctx.createGain();
       this.master.gain.value = this.masterVolume;
       this.filter.connect(this.master);
       this.master.connect(this.ctx.destination);
+      this.pulse25 = nesPulseWave(this.ctx, 0.25);
     }
     if (this.ctx.state === "suspended") this.ctx.resume();
     return this.ctx;
@@ -60,6 +73,7 @@ export class ChipSynth {
   }
 
   vol(track) {
+    if (this.solo && this.solo !== track) return 0;
     return this.muted[track] ? 0 : this.volumes[track];
   }
 
@@ -68,23 +82,28 @@ export class ChipSynth {
     const ctx = this.ensure();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    osc.type = type;
+    if (type === "pulse" && this.pulse25) osc.setPeriodicWave(this.pulse25);
+    else osc.type = type;
     osc.frequency.setValueAtTime(freq, time);
     gain.gain.setValueAtTime(0.0001, time);
-    gain.gain.exponentialRampToValueAtTime(volume, time + 0.008);
+    gain.gain.exponentialRampToValueAtTime(volume, time + 0.006);
     gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
     osc.connect(gain).connect(this.filter);
     osc.start(time);
     osc.stop(time + duration + 0.02);
   }
 
-  noise(time, duration, volume, hpFreq) {
+  noise(time, duration, volume, hpFreq, crunch = 8) {
     if (volume <= 0) return;
     const ctx = this.ensure();
     const length = Math.ceil(ctx.sampleRate * duration);
     const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
     const data = buffer.getChannelData(0);
-    for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
+    let last = 0;
+    for (let i = 0; i < length; i++) {
+      if (i % crunch === 0) last = Math.random() * 2 - 1;
+      data[i] = last;
+    }
 
     const src = ctx.createBufferSource();
     src.buffer = buffer;
@@ -106,30 +125,32 @@ export class ChipSynth {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = "triangle";
-    osc.frequency.setValueAtTime(140, time);
-    osc.frequency.exponentialRampToValueAtTime(38, time + 0.11);
+    osc.frequency.setValueAtTime(150, time);
+    osc.frequency.exponentialRampToValueAtTime(36, time + 0.12);
     gain.gain.setValueAtTime(volume, time);
-    gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.16);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.17);
     osc.connect(gain).connect(this.filter);
     osc.start(time);
-    osc.stop(time + 0.18);
+    osc.stop(time + 0.2);
   }
 
   snare(time) {
-    this.noise(time, 0.12, this.vol("snare"), 1200);
-    this.pulse(time, 180, 0.08, this.vol("snare") * 0.35, "triangle");
+    this.noise(time, 0.13, this.vol("snare"), 1400, 12);
+    this.pulse(time, 190, 0.07, this.vol("snare") * 0.32, "triangle");
   }
 
   hat(time) {
-    this.noise(time, 0.045, this.vol("hat"), 6000);
+    this.noise(time, 0.04, this.vol("hat"), 6500, 6);
   }
 
   note(track, noteName, time, duration) {
     const freq = NOTE_FREQ[noteName];
     if (!freq) return;
-    const type = track === "bass" ? "triangle" : "square";
-    const dur = track === "bass" ? duration * 0.9 : duration * 0.55;
-    this.pulse(time, freq, dur, this.vol(track), type);
+    if (track === "bass") {
+      this.pulse(time, freq, duration * 0.92, this.vol(track), "triangle");
+      return;
+    }
+    this.pulse(time, freq, duration * 0.52, this.vol(track), "pulse");
   }
 }
 
