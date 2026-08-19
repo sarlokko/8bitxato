@@ -17,11 +17,17 @@
   <div class="crt"></div>
   <header class="top">
     <div class="brand">
-      <img id="xato" class="xato" src="favicon.svg" alt="Xato" width="72" height="72">
+      <div class="xato-wrap">
+        <img id="xato" class="xato" src="favicon.svg" alt="Xato" width="72" height="72">
+        <span id="xato-say" class="xato-say" aria-hidden="true"></span>
+      </div>
+      <div id="eq" class="eq" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
       <div>
-        <p class="tag">v1.1 · 16 step</p>
+        <p class="tag">v1.2 · 16 step</p>
         <h1>8BITXATO</h1>
-        <p class="sub">Componi un loop chiptune. Spazio = play/stop.</p>
+        <p class="sub">Clicca una casella per sentire la nota. Spazio = play.</p>
       </div>
     </div>
     <div class="transport">
@@ -44,12 +50,15 @@
   </header>
 
   <section class="toolbar">
+    <button type="button" id="undo">UNDO</button>
     <button type="button" id="random">RANDOM</button>
     <button type="button" id="clear">CLEAR</button>
     <button type="button" id="duplicate">DUPLICA 8</button>
-    <button type="button" data-preset="boing">PRESET BOING</button>
-    <button type="button" data-preset="boss">PRESET BOSS</button>
-    <button type="button" data-preset="nanna">PRESET NANNA</button>
+    <button type="button" data-preset="boing">BOING</button>
+    <button type="button" data-preset="boss">BOSS</button>
+    <button type="button" data-preset="nanna">NANNA</button>
+    <button type="button" data-preset="miao">MIAO</button>
+    <button type="button" data-preset="rincorsa">RINCORSA</button>
     <button type="button" id="copy-link">COPIA LINK</button>
     <button type="button" id="export">ESPORTA</button>
     <label class="import">
@@ -59,8 +68,8 @@
   </section>
 
   <div class="legend">
-    <span>Clicca o trascina una casella per mettere (o togliere) una nota.</span>
-    <span>Una sola nota per colonna su lead e basso.</span>
+    <span>Clicca o trascina. Il suono parte subito.</span>
+    <span>1–8 = lead · Z X C = kick snare hat · Ctrl+Z = undo</span>
   </div>
 
   <div class="board">

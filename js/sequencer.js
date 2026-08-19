@@ -4,6 +4,7 @@ const STEPS = 16;
 const STORAGE_KEY = "8bitxato-pattern";
 const NOTE_TRACKS = ["lead", "bass"];
 const DRUM_TRACKS = ["kick", "snare", "hat"];
+const UNDO_LIMIT = 40;
 
 function emptyPattern() {
   return {
@@ -154,6 +155,24 @@ export const PRESETS = {
     snare: Array(STEPS).fill(false),
     hat: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0].map(Boolean),
   },
+  miao: {
+    bpm: 104,
+    swing: 14,
+    lead: ["E4", null, "G4", "A4", null, "G4", "E4", null, "C5", null, "A4", "G4", null, "E4", "C4", null],
+    bass: ["A1", null, null, "A1", "E2", null, null, "E2", "A2", null, "G2", null, "E2", null, "A1", null],
+    kick: [1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0].map(Boolean),
+    snare: [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0].map(Boolean),
+    hat: [1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0].map(Boolean),
+  },
+  rincorsa: {
+    bpm: 168,
+    swing: 0,
+    lead: ["E4", "G4", "A4", "C5", "A4", "G4", "E4", "D4", "E4", "G4", "A4", "C5", "D4", "E4", "G4", "A4"],
+    bass: ["E2", "E2", null, "E2", "G2", "G2", null, "G2", "A2", "A2", null, "A2", "C3", null, "G2", null],
+    kick: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1].map(Boolean),
+    snare: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1].map(Boolean),
+    hat: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1].map(Boolean),
+  },
 };
 
 export class Sequencer {
@@ -162,8 +181,10 @@ export class Sequencer {
     this.pattern = emptyPattern();
     this.playing = false;
     this.currentStep = 0;
+    this.heardStep = 0;
     this.nextNoteTime = 0;
     this.timer = null;
+    this.history = [];
     this.onStep = onStep;
     this.load();
     this.applyMix();
@@ -172,6 +193,32 @@ export class Sequencer {
   applyMix() {
     this.synth.volumes = { ...DEFAULT_VOLUMES, ...this.pattern.volumes };
     this.synth.muted = { ...DEFAULT_MUTED, ...this.pattern.muted };
+  }
+
+  snapshot() {
+    return structuredClone(this.pattern);
+  }
+
+  pushUndo() {
+    this.history.push(this.snapshot());
+    if (this.history.length > UNDO_LIMIT) this.history.shift();
+  }
+
+  canUndo() {
+    return this.history.length > 0;
+  }
+
+  undo() {
+    const prev = this.history.pop();
+    if (!prev) return false;
+    this.pattern = normalizePattern(prev);
+    this.applyMix();
+    this.save();
+    return true;
+  }
+
+  setSolo(track) {
+    this.synth.solo = this.synth.solo === track ? null : track || null;
   }
 
   stepDuration(step = this.currentStep) {
@@ -221,6 +268,7 @@ export class Sequencer {
   }
 
   clear() {
+    this.pushUndo();
     const bpm = this.pattern.bpm;
     const swing = this.pattern.swing;
     const volumes = { ...this.pattern.volumes };
@@ -234,6 +282,7 @@ export class Sequencer {
   }
 
   duplicate8() {
+    this.pushUndo();
     for (const key of [...NOTE_TRACKS, ...DRUM_TRACKS]) {
       for (let i = 0; i < 8; i++) this.pattern[key][i + 8] = this.pattern[key][i];
     }
@@ -241,6 +290,7 @@ export class Sequencer {
   }
 
   randomize() {
+    this.pushUndo();
     const pick = (notes) => (Math.random() < 0.45 ? notes[Math.floor(Math.random() * notes.length)] : null);
     this.pattern.lead = Array.from({ length: STEPS }, () => pick(LEAD_NOTES));
     this.pattern.bass = Array.from({ length: STEPS }, (_, i) => (i % 4 === 0 ? pick(BASS_NOTES) : null));
@@ -253,6 +303,7 @@ export class Sequencer {
   loadPreset(name) {
     const preset = PRESETS[name];
     if (!preset) return;
+    this.pushUndo();
     const volumes = { ...this.pattern.volumes };
     const muted = { ...this.pattern.muted };
     this.pattern = normalizePattern(structuredClone(preset));
@@ -261,11 +312,27 @@ export class Sequencer {
     this.save();
   }
 
+  audition(track, note) {
+    const time = this.synth.now();
+    const muted = this.synth.muted[track];
+    const solo = this.synth.solo;
+    this.synth.muted[track] = false;
+    this.synth.solo = null;
+    const dur = Math.max(0.12, this.stepDuration(0) * 0.85);
+    if (note) this.synth.note(track, note, time, dur);
+    else if (track === "kick") this.synth.kick(time);
+    else if (track === "snare") this.synth.snare(time);
+    else if (track === "hat") this.synth.hat(time);
+    this.synth.muted[track] = muted;
+    this.synth.solo = solo;
+  }
+
   play() {
     this.synth.ensure();
     if (this.playing) return;
     this.playing = true;
     this.currentStep = 0;
+    this.heardStep = 0;
     this.nextNoteTime = this.synth.now() + 0.06;
     this.scheduler();
     this.timer = setInterval(() => this.scheduler(), 25);
@@ -276,6 +343,7 @@ export class Sequencer {
     clearInterval(this.timer);
     this.timer = null;
     this.currentStep = 0;
+    this.heardStep = 0;
     this.onStep(-1);
   }
 
@@ -292,7 +360,10 @@ export class Sequencer {
 
   schedule(step, time) {
     const delay = Math.max(0, (time - this.synth.now()) * 1000);
-    setTimeout(() => this.onStep(step), delay);
+    setTimeout(() => {
+      this.heardStep = step;
+      this.onStep(step);
+    }, delay);
 
     const p = this.pattern;
     const dur = this.stepDuration(step);
@@ -338,10 +409,11 @@ export class Sequencer {
   }
 
   importJson(text) {
+    this.pushUndo();
     this.pattern = decodePattern(text);
     this.applyMix();
     this.save();
   }
 }
 
-export { STEPS, emptyPattern, normalizePattern };
+export { STEPS, emptyPattern, normalizePattern, NOTE_TRACKS, DRUM_TRACKS };
