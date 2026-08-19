@@ -300,6 +300,68 @@ export class ChipSynth {
     }
     this.pulse(time, freq, duration * kit.leadDur, this.vol(track), kit.lead);
   }
+
+  fxWave() {
+    const lead = this.kit().lead;
+    if (lead === "pulse12" || lead === "pulse25") return lead;
+    if (lead === "triangle") return "triangle";
+    return "square";
+  }
+
+  meow(time, kind = "miao") {
+    const ctx = this.ensure();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    this.applyWave(osc, this.fxWave());
+    const volume = 0.28;
+    if (kind === "ask") {
+      osc.frequency.setValueAtTime(480, time);
+      osc.frequency.exponentialRampToValueAtTime(920, time + 0.16);
+      gain.gain.setValueAtTime(0.0001, time);
+      gain.gain.exponentialRampToValueAtTime(volume, time + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.2);
+      osc.connect(gain).connect(this.filter);
+      osc.start(time);
+      osc.stop(time + 0.22);
+      return;
+    }
+    if (kind === "nya") {
+      osc.frequency.setValueAtTime(1100, time);
+      osc.frequency.exponentialRampToValueAtTime(640, time + 0.07);
+      gain.gain.setValueAtTime(volume, time);
+      gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.1);
+      osc.connect(gain).connect(this.filter);
+      osc.start(time);
+      osc.stop(time + 0.12);
+      return;
+    }
+    osc.frequency.setValueAtTime(880, time);
+    osc.frequency.exponentialRampToValueAtTime(390, time + 0.1);
+    osc.frequency.exponentialRampToValueAtTime(540, time + 0.2);
+    gain.gain.setValueAtTime(0.0001, time);
+    gain.gain.exponentialRampToValueAtTime(volume, time + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.24);
+    osc.connect(gain).connect(this.filter);
+    osc.start(time);
+    osc.stop(time + 0.26);
+  }
+
+  purr(time) {
+    for (let i = 0; i < 14; i++) {
+      this.pulse(time + i * 0.03, 150 + (i % 2) * 22, 0.026, 0.11, "triangle");
+    }
+  }
+
+  catSolo(time, stepDur) {
+    const run = ["C5", "E4", "G4", "A4", "C5", "A4", "G4", "E4"];
+    const dt = Math.max(0.07, stepDur * 0.5);
+    run.forEach((note, i) => {
+      const freq = NOTE_FREQ[note];
+      if (freq) this.pulse(time + i * dt, freq, dt * 0.7, 0.2, this.fxWave());
+    });
+    this.pulse(time, 220, 0.18, 0.32, "triangle");
+    this.pulse(time + dt * 4, 180, 0.18, 0.28, "triangle");
+  }
 }
 
 export { NOTE_FREQ };

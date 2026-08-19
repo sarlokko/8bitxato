@@ -9,7 +9,7 @@ import {
   encodePattern,
   normalizePattern,
 } from "../js/sequencer.js";
-import { BASS_NOTES, DEFAULT_KIT, LEAD_NOTES } from "../js/synth.js";
+import { BASS_NOTES, ChipSynth, DEFAULT_KIT, LEAD_NOTES } from "../js/synth.js";
 
 describe("pattern codec", () => {
   it("round-trips presets", () => {
@@ -119,5 +119,20 @@ describe("sequencer edits", () => {
     assert.equal(seq.synth.kitId, "boy");
     seq.setKit("inventato");
     assert.equal(seq.pattern.kit, "classico");
+  });
+
+  it("picks a chip wave for Xato click fx", () => {
+    const synth = new ChipSynth();
+    synth.kitId = "classico";
+    assert.equal(synth.fxWave(), "square");
+    synth.kitId = "nes";
+    assert.equal(synth.fxWave(), "pulse25");
+    synth.kitId = "boy";
+    assert.equal(synth.fxWave(), "pulse12");
+    synth.kitId = "notte";
+    assert.equal(synth.fxWave(), "triangle");
+    assert.equal(typeof synth.meow, "function");
+    assert.equal(typeof synth.purr, "function");
+    assert.equal(typeof synth.catSolo, "function");
   });
 });
