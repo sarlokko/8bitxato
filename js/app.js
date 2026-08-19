@@ -26,14 +26,24 @@ const LEAD_KEYS = {
 let paint = null;
 let sayTimer = null;
 let viewBar = "all";
+let resizeTimer = null;
 
 function el(id) {
   return document.getElementById(id);
 }
 
+function isCompact() {
+  return window.matchMedia("(max-width: 920px)").matches;
+}
+
 function visibleRange() {
-  if (viewBar === "all") return { start: 0, count: STEPS };
-  const bar = Number(viewBar) || 0;
+  if (viewBar === "all" && !isCompact()) return { start: 0, count: STEPS };
+  const bar =
+    viewBar === "all"
+      ? seq.playing
+        ? Math.floor(Math.max(0, seq.heardStep) / BAR_STEPS)
+        : 0
+      : Number(viewBar) || 0;
   return { start: bar * BAR_STEPS, count: BAR_STEPS };
 }
 
@@ -159,10 +169,9 @@ function pulseEq(step) {
 }
 
 function highlightStep(step, { skipFollow = false } = {}) {
-  if (!skipFollow && viewBar !== "all" && step >= 0) {
-    const bar = Math.floor(step / BAR_STEPS);
-    if (String(viewBar) !== String(bar)) {
-      viewBar = bar;
+  if (!skipFollow && step >= 0 && visibleRange().count === BAR_STEPS) {
+    const needStart = Math.floor(step / BAR_STEPS) * BAR_STEPS;
+    if (needStart !== visibleRange().start) {
       renderGrid();
       return;
     }
@@ -203,13 +212,21 @@ function syncTransport() {
 }
 
 function syncBars() {
+  const shown = String(Math.floor(visibleRange().start / BAR_STEPS));
   document.querySelectorAll("[data-bar]").forEach((btn) => {
-    btn.classList.toggle("on", String(btn.dataset.bar) === String(viewBar));
+    const on =
+      viewBar === "all" && !isCompact()
+        ? btn.dataset.bar === "all"
+        : btn.dataset.bar === shown;
+    btn.classList.toggle("on", on);
   });
   const label = el("bar-now");
   if (label) {
-    const bar = seq.playing ? Math.floor(seq.heardStep / BAR_STEPS) + 1 : Number(viewBar) + 1;
-    label.textContent = viewBar === "all" ? "1+2" : `BAR ${Number.isFinite(bar) ? bar : 1}`;
+    if (viewBar === "all" && !isCompact()) {
+      label.textContent = seq.playing ? `1+2 · ${Math.floor(Math.max(0, seq.heardStep) / BAR_STEPS) + 1}` : "1+2";
+    } else {
+      label.textContent = `BAR ${Number(shown) + 1}`;
+    }
   }
 }
 
@@ -446,6 +463,11 @@ function bind() {
         syncNoteCells("lead", seq.heardStep);
       }
     }
+  });
+
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => renderGrid(), 80);
   });
 }
 

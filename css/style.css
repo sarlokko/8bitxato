@@ -15,13 +15,18 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
 body {
   min-height: 100vh;
   color: var(--text);
   font-family: "VT323", monospace;
   background:
     radial-gradient(circle at top, #1a2030 0%, var(--bg) 48%);
-  padding: 1.25rem;
+  padding: 1rem 1.1rem 1.5rem;
 }
 
 .crt {
@@ -37,7 +42,8 @@ body {
 }
 
 .top, .toolbar, .legend, .board, .kits, .bars, footer {
-  max-width: 1100px;
+  max-width: 1400px;
+  width: 100%;
   margin-left: auto;
   margin-right: auto;
 }
@@ -233,27 +239,22 @@ button:disabled { opacity: 0.35; cursor: default; filter: none; }
 }
 
 .board {
-  overflow-x: auto;
-  padding-bottom: 0.4rem;
+  overflow: hidden;
 }
 
 .step-numbers, .note-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  min-width: 720px;
-}
-
-.board.wide .step-numbers,
-.board.wide .note-row {
-  min-width: 1180px;
+  gap: 0.4rem;
+  min-width: 0;
+  width: 100%;
 }
 
 .note-name {
-  width: 42px;
-  flex: 0 0 42px;
+  width: 36px;
+  flex: 0 0 36px;
   color: var(--muted);
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-family: "VT323", monospace;
   background: transparent;
   box-shadow: none;
@@ -265,9 +266,10 @@ button:disabled { opacity: 0.35; cursor: default; filter: none; }
 
 .steps {
   display: grid;
-  grid-template-columns: repeat(var(--cols, 16), minmax(22px, 1fr));
-  gap: 3px;
+  grid-template-columns: repeat(var(--cols, 16), minmax(0, 1fr));
+  gap: 2px;
   flex: 1;
+  min-width: 0;
 }
 
 .step-num {
@@ -282,8 +284,9 @@ button:disabled { opacity: 0.35; cursor: default; filter: none; }
 .track {
   background: var(--panel);
   border: 2px solid var(--line);
-  padding: 0.7rem;
-  margin-bottom: 0.7rem;
+  padding: 0.55rem 0.55rem 0.45rem;
+  margin-bottom: 0.55rem;
+  overflow: hidden;
 }
 
 .track.muted,
@@ -330,7 +333,9 @@ button:disabled { opacity: 0.35; cursor: default; filter: none; }
 .solo-btn.on { background: var(--current); color: var(--bg); }
 
 .cell {
-  height: 22px;
+  height: clamp(18px, 2.2vw, 26px);
+  min-width: 0;
+  width: 100%;
   border: 1px solid #394156;
   background: #0c1018;
   box-shadow: none;
@@ -351,10 +356,11 @@ button:disabled { opacity: 0.35; cursor: default; filter: none; }
 
 .cell.current {
   outline: 2px solid var(--current);
-  box-shadow: 0 0 10px #fff7a066;
+  outline-offset: -2px;
+  box-shadow: inset 0 0 0 1px #fff7a066;
 }
 
-.cell.drum { height: 28px; }
+.cell.drum { height: clamp(22px, 2.8vw, 30px); }
 
 footer {
   margin-top: 1.2rem;
@@ -362,8 +368,8 @@ footer {
   font-size: 1.1rem;
 }
 
-@media (max-width: 720px) {
-  body { padding: 0.8rem; padding-bottom: 5.5rem; }
+@media (max-width: 920px) {
+  body { padding: 0.7rem; padding-bottom: 5.5rem; }
   .top {
     position: sticky;
     top: 0;
@@ -372,7 +378,10 @@ footer {
     padding-top: 0.4rem;
     padding-bottom: 0.55rem;
   }
-  .cell { height: 18px; }
-  .note-name { width: 32px; flex-basis: 32px; font-size: 0.95rem; }
+  [data-bar="all"] { display: none; }
+  .cell { height: 22px; }
+  .cell.drum { height: 26px; }
+  .note-name { width: 30px; flex-basis: 30px; font-size: 0.95rem; }
   .xato, .xato-wrap { width: 56px; height: 56px; }
+  .step-num { font-size: 0.8rem; }
 }
