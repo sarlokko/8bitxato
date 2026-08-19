@@ -16,14 +16,15 @@ const NOTE_FREQ = {
   E4: 329.63,
   G4: 392.0,
   A4: 440.0,
+  B4: 493.88,
   C5: 523.25,
 };
 
 export const LEAD_NOTES = ["C5", "A4", "G4", "E4", "D4", "C4", "A3", "G3"];
 export const BASS_NOTES = ["C3", "A2", "G2", "E2", "D2", "C2", "A1", "G1"];
 
-export const DEFAULT_VOLUMES = { lead: 0.22, bass: 0.28, kick: 0.7, snare: 0.35, hat: 0.18 };
-export const DEFAULT_MUTED = { lead: false, bass: false, kick: false, snare: false, hat: false };
+export const DEFAULT_VOLUMES = { lead: 0.22, bass: 0.28, kick: 0.7, snare: 0.35, hat: 0.18, tom: 0.42 };
+export const DEFAULT_MUTED = { lead: false, bass: false, kick: false, snare: false, hat: false, tom: false };
 export const DEFAULT_KIT = "classico";
 
 export const KITS = {
@@ -271,6 +272,22 @@ export class ChipSynth {
   hat(time) {
     const kit = this.kit();
     this.noise(time, kit.hatDur, this.vol("hat"), kit.hatHp);
+  }
+
+  tom(time) {
+    const volume = this.vol("tom");
+    if (volume <= 0) return;
+    const ctx = this.ensure();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(220, time);
+    osc.frequency.exponentialRampToValueAtTime(82, time + 0.13);
+    gain.gain.setValueAtTime(volume, time);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.18);
+    osc.connect(gain).connect(this.filter);
+    osc.start(time);
+    osc.stop(time + 0.2);
   }
 
   note(track, noteName, time, duration) {

@@ -22,6 +22,7 @@ describe("pattern codec", () => {
       assert.deepEqual(decoded.kick, preset.kick, name);
       assert.deepEqual(decoded.snare, preset.snare, name);
       assert.deepEqual(decoded.hat, preset.hat, name);
+      assert.deepEqual(decoded.tom, preset.tom, name);
     }
   });
 
@@ -37,6 +38,7 @@ describe("pattern codec", () => {
     assert.equal(decoded.lead.length, STEPS);
     assert.equal(decoded.lead[0], "C5");
     assert.equal(decoded.lead[1], null);
+    assert.equal(decoded.lead[16], "C5");
     assert.equal(decoded.bpm, 90);
     assert.equal(decoded.kit, DEFAULT_KIT);
   });
@@ -75,6 +77,26 @@ describe("sequencer edits", () => {
     seq.duplicate8();
     assert.equal(seq.pattern.lead[8], "C5");
     assert.equal(seq.pattern.kick[9], true);
+  });
+
+  it("duplicates bar 1 into bar 2", () => {
+    const seq = new Sequencer(() => {});
+    seq.pattern = emptyPattern();
+    seq.pattern.lead[3] = "G4";
+    seq.pattern.tom[5] = true;
+    seq.duplicate16();
+    assert.equal(seq.pattern.lead[19], "G4");
+    assert.equal(seq.pattern.tom[21], true);
+  });
+
+  it("holds repeated notes as one voice", () => {
+    const seq = new Sequencer(() => {});
+    seq.pattern = emptyPattern();
+    seq.pattern.lead[0] = "C5";
+    seq.pattern.lead[1] = "C5";
+    seq.pattern.lead[2] = "C5";
+    assert.equal(seq.holdLength("lead", 0), 3);
+    assert.equal(seq.holdLength("lead", 1), 0);
   });
 
   it("keeps preset notes on the piano roll", () => {

@@ -36,7 +36,7 @@ body {
   z-index: 5;
 }
 
-.top, .toolbar, .legend, .board, .kits, footer {
+.top, .toolbar, .legend, .board, .kits, .bars, footer {
   max-width: 1100px;
   margin-left: auto;
   margin-right: auto;
@@ -207,6 +207,14 @@ button:disabled { opacity: 0.35; cursor: default; filter: none; }
   color: var(--bg);
   border-color: var(--lead);
 }
+
+.bar-now {
+  color: var(--current);
+  font-size: 1.15rem;
+  margin-left: 0.35rem;
+}
+
+#duplicate-bar { background: var(--bass); }
 .import { display: inline-block; cursor: pointer; background: var(--bass); }
 .import input { display: none; }
 #copy-link { background: var(--xato); }
@@ -236,6 +244,11 @@ button:disabled { opacity: 0.35; cursor: default; filter: none; }
   min-width: 720px;
 }
 
+.board.wide .step-numbers,
+.board.wide .note-row {
+  min-width: 1180px;
+}
+
 .note-name {
   width: 42px;
   flex: 0 0 42px;
@@ -252,7 +265,7 @@ button:disabled { opacity: 0.35; cursor: default; filter: none; }
 
 .steps {
   display: grid;
-  grid-template-columns: repeat(16, minmax(22px, 1fr));
+  grid-template-columns: repeat(var(--cols, 16), minmax(22px, 1fr));
   gap: 3px;
   flex: 1;
 }
@@ -296,6 +309,7 @@ button:disabled { opacity: 0.35; cursor: default; filter: none; }
 .track[data-track-panel="kick"] h2 { color: var(--kick); }
 .track[data-track-panel="snare"] h2 { color: var(--snare); }
 .track[data-track-panel="hat"] h2 { color: var(--hat); }
+.track[data-track-panel="tom"] h2 { color: var(--xato); }
 
 .mute, .vol {
   display: flex;
@@ -326,12 +340,14 @@ button:disabled { opacity: 0.35; cursor: default; filter: none; }
 
 .cell.beat { background: #141a26; border-left: 2px solid #4d5a78; }
 .cell.bar { border-left-color: #8ea0c8; }
+.cell.mid { border-left: 3px solid var(--xato); }
 .cell.on { filter: none; }
 .track[data-track-panel="lead"] .cell.on { background: var(--lead); }
 .track[data-track-panel="bass"] .cell.on { background: var(--bass); }
 .track[data-track-panel="kick"] .cell.on { background: var(--kick); }
 .track[data-track-panel="snare"] .cell.on { background: var(--snare); }
 .track[data-track-panel="hat"] .cell.on { background: var(--hat); }
+.track[data-track-panel="tom"] .cell.on { background: var(--xato); }
 
 .cell.current {
   outline: 2px solid var(--current);
