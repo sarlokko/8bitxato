@@ -23,10 +23,16 @@ const LEAD_KEYS = {
   Digit8: "G3",
 };
 
+const TRICK_CLASSES = ["trick-meow", "trick-purr", "trick-spin", "trick-solo"];
+
 let paint = null;
 let sayTimer = null;
 let viewBar = "all";
 let resizeTimer = null;
+let xatoLockUntil = 0;
+let xatoCombo = 0;
+let xatoComboTimer = null;
+let trickTimer = null;
 
 function el(id) {
   return document.getElementById(id);
@@ -137,13 +143,67 @@ function syncNoteCells(track, step) {
   });
 }
 
-function xatoSay(text) {
+function xatoSay(text, ms = 180) {
   const bubble = el("xato-say");
   if (!bubble) return;
+  if (ms <= 180 && Date.now() < xatoLockUntil) return;
   bubble.textContent = text;
   bubble.classList.add("show");
   clearTimeout(sayTimer);
-  sayTimer = setTimeout(() => bubble.classList.remove("show"), 180);
+  sayTimer = setTimeout(() => bubble.classList.remove("show"), ms);
+}
+
+function playXatoTrick(cls, ms) {
+  const cat = el("xato");
+  if (!cat) return;
+  cat.classList.remove(...TRICK_CLASSES);
+  void cat.offsetWidth;
+  cat.classList.add(cls);
+  clearTimeout(trickTimer);
+  trickTimer = setTimeout(() => cat.classList.remove(cls), ms);
+}
+
+function pokeXato() {
+  const ctx = seq.synth.ensure();
+  const t = ctx.currentTime;
+  clearTimeout(xatoComboTimer);
+  xatoCombo += 1;
+  const level = Math.min(xatoCombo, 5);
+
+  if (level === 1) {
+    seq.synth.meow(t, "miao");
+    xatoSay("MIAO", 420);
+    playXatoTrick("trick-meow", 420);
+    xatoLockUntil = Date.now() + 420;
+  } else if (level === 2) {
+    seq.synth.meow(t, "miao");
+    seq.synth.meow(t + 0.12, "ask");
+    xatoSay("MIAO?", 520);
+    playXatoTrick("trick-meow", 520);
+    xatoLockUntil = Date.now() + 520;
+  } else if (level === 3) {
+    seq.synth.purr(t);
+    xatoSay("PURR", 720);
+    playXatoTrick("trick-purr", 720);
+    xatoLockUntil = Date.now() + 720;
+  } else if (level === 4) {
+    seq.synth.meow(t, "nya");
+    seq.synth.meow(t + 0.11, "miao");
+    seq.synth.meow(t + 0.28, "ask");
+    xatoSay("NYA", 650);
+    playXatoTrick("trick-spin", 560);
+    xatoLockUntil = Date.now() + 650;
+  } else {
+    seq.synth.catSolo(t, seq.stepDuration());
+    xatoSay("SOLO!", 900);
+    playXatoTrick("trick-solo", 900);
+    xatoLockUntil = Date.now() + 900;
+    xatoCombo = 0;
+  }
+
+  xatoComboTimer = setTimeout(() => {
+    xatoCombo = 0;
+  }, 900);
 }
 
 function pulseEq(step) {
@@ -350,6 +410,8 @@ function bind() {
       e.target.closest(".track").classList.toggle("muted", e.target.checked);
     }
   });
+
+  el("xato-btn").addEventListener("click", pokeXato);
 
   el("play").addEventListener("click", () => {
     if (seq.playing) seq.stop();

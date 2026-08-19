@@ -67,6 +67,29 @@ body {
   position: relative;
   width: 72px;
   height: 72px;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: inherit;
+  font-size: 0;
+  line-height: 0;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.xato-wrap:hover { filter: none; }
+
+.xato-wrap:hover .xato {
+  filter: drop-shadow(3px 3px 0 #14301a) brightness(1.12);
+}
+
+.xato-wrap:focus { outline: none; }
+
+.xato-wrap:focus-visible {
+  outline: 2px solid var(--xato);
+  outline-offset: 3px;
 }
 
 .xato {
@@ -88,9 +111,62 @@ body {
 
 .xato.sing { filter: drop-shadow(3px 3px 0 #14301a) saturate(1.35); }
 
+.xato-wrap .xato.trick-meow,
+.xato-wrap .xato.playing.trick-meow,
+.xato-wrap .xato.kick.trick-meow {
+  animation: xato-meow 0.42s steps(3);
+}
+
+.xato-wrap .xato.trick-purr,
+.xato-wrap .xato.playing.trick-purr,
+.xato-wrap .xato.kick.trick-purr {
+  animation: xato-purr 0.7s steps(4);
+}
+
+.xato-wrap .xato.trick-spin,
+.xato-wrap .xato.playing.trick-spin,
+.xato-wrap .xato.kick.trick-spin {
+  animation: xato-spin 0.55s steps(4);
+}
+
+.xato-wrap .xato.trick-solo,
+.xato-wrap .xato.playing.trick-solo,
+.xato-wrap .xato.kick.trick-solo {
+  animation: xato-solo 0.9s steps(6);
+}
+
 @keyframes bob {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }
+}
+
+@keyframes xato-meow {
+  0%, 100% { transform: translateY(0) rotate(0) scale(1); }
+  35% { transform: translateY(-16px) rotate(-10deg) scale(1.12); }
+  70% { transform: translateY(-4px) rotate(8deg) scale(1.04); }
+}
+
+@keyframes xato-purr {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  25% { transform: translateX(-5px) rotate(-4deg); }
+  50% { transform: translateX(5px) rotate(4deg); }
+  75% { transform: translateX(-3px) rotate(-2deg); }
+}
+
+@keyframes xato-spin {
+  0% { transform: rotate(0) scale(1); }
+  35% { transform: rotate(-18deg) scale(1.14); }
+  75% { transform: rotate(360deg) scale(1.06); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+@keyframes xato-solo {
+  0%, 100% { transform: translateY(0) rotate(0) scale(1); }
+  16% { transform: translateY(-16px) rotate(-12deg) scale(1.16); }
+  32% { transform: translateY(-2px) rotate(12deg) scale(1.05); }
+  48% { transform: translateY(-18px) rotate(-8deg) scale(1.22); }
+  64% { transform: translateY(0) rotate(16deg) scale(1.08); }
+  80% { transform: translateY(-10px) rotate(-6deg) scale(1.1); }
 }
 
 .xato-say {
