@@ -89,16 +89,6 @@ describe("sequencer edits", () => {
     assert.equal(seq.pattern.tom[21], true);
   });
 
-  it("holds repeated notes as one voice", () => {
-    const seq = new Sequencer(() => {});
-    seq.pattern = emptyPattern();
-    seq.pattern.lead[0] = "C5";
-    seq.pattern.lead[1] = "C5";
-    seq.pattern.lead[2] = "C5";
-    assert.equal(seq.holdLength("lead", 0), 3);
-    assert.equal(seq.holdLength("lead", 1), 0);
-  });
-
   it("keeps preset notes on the piano roll", () => {
     for (const preset of Object.values(PRESETS)) {
       for (const note of preset.lead.filter(Boolean)) {

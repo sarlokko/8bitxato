@@ -352,21 +352,6 @@ export class Sequencer {
     return sixteenth * (1 - swing);
   }
 
-  holdLength(track, step) {
-    const note = this.pattern[track][step];
-    if (!note) return 0;
-    if (step > 0 && this.pattern[track][step - 1] === note) return 0;
-    let n = 1;
-    while (step + n < STEPS && this.pattern[track][step + n] === note) n++;
-    return n;
-  }
-
-  holdDuration(step, count) {
-    let dur = 0;
-    for (let i = 0; i < count; i++) dur += this.stepDuration(step + i);
-    return dur;
-  }
-
   setDrum(track, step, on) {
     this.pattern[track][step] = Boolean(on);
     this.save();
@@ -540,15 +525,13 @@ export class Sequencer {
     }, delay);
 
     const p = this.pattern;
+    const dur = this.stepDuration(step);
     if (p.kick[step]) this.synth.kick(time);
     if (p.snare[step]) this.synth.snare(time);
     if (p.hat[step]) this.synth.hat(time);
     if (p.tom[step]) this.synth.tom(time);
-
-    const leadHold = this.holdLength("lead", step);
-    if (leadHold) this.synth.note("lead", p.lead[step], time, this.holdDuration(step, leadHold));
-    const bassHold = this.holdLength("bass", step);
-    if (bassHold) this.synth.note("bass", p.bass[step], time, this.holdDuration(step, bassHold));
+    if (p.lead[step]) this.synth.note("lead", p.lead[step], time, dur);
+    if (p.bass[step]) this.synth.note("bass", p.bass[step], time, dur);
   }
 
   save() {
