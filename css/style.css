@@ -322,7 +322,19 @@ button:disabled { opacity: 0.35; cursor: default; filter: none; }
 .board {
   flex: 1 1 auto;
   min-height: 0;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.board-scroll {
+  --cols: 32;
+  --cell-min: 0px;
+  width: 100%;
+  min-width: 100%;
+  min-height: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
 }
@@ -369,10 +381,13 @@ button:disabled { opacity: 0.35; cursor: default; filter: none; }
   color: var(--muted);
   font-size: 1.05rem;
   font-family: "VT323", monospace;
-  background: transparent;
-  box-shadow: none;
+  background: var(--panel);
+  box-shadow: 6px 0 8px var(--panel);
   padding: 0;
   text-align: left;
+  position: sticky;
+  left: 0;
+  z-index: 3;
 }
 
 .note-name:hover { color: var(--text); filter: none; }
@@ -397,6 +412,7 @@ button:disabled { opacity: 0.35; cursor: default; filter: none; }
 }
 
 .step-num.beat { color: var(--text); }
+.step-num.mid { color: var(--xato); }
 .step-num.current { color: var(--current); }
 
 .track {
@@ -516,7 +532,6 @@ footer {
     padding-top: 0.15rem;
     padding-bottom: 0.25rem;
   }
-  [data-bar="all"] { display: none; }
   .note-name { width: 30px; flex-basis: 30px; font-size: 0.95rem; }
   .xato, .xato-wrap, button.xato-wrap { width: 48px; height: 48px; }
   .step-num { font-size: 0.8rem; }

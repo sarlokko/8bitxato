@@ -38,18 +38,9 @@ function el(id) {
   return document.getElementById(id);
 }
 
-function isCompact() {
-  return window.matchMedia("(max-width: 920px)").matches;
-}
-
 function visibleRange() {
-  if (viewBar === "all" && !isCompact()) return { start: 0, count: STEPS };
-  const bar =
-    viewBar === "all"
-      ? seq.playing
-        ? Math.floor(Math.max(0, seq.heardStep) / BAR_STEPS)
-        : 0
-      : Number(viewBar) || 0;
+  if (viewBar === "all") return { start: 0, count: STEPS };
+  const bar = Number(viewBar) || 0;
   return { start: bar * BAR_STEPS, count: BAR_STEPS };
 }
 
@@ -63,7 +54,14 @@ function cellClass(step, on) {
 function renderGrid() {
   const { start, count } = visibleRange();
   const root = el("grid");
-  root.closest(".board")?.classList.toggle("wide", count === STEPS);
+  const board = root.closest(".board");
+  const scroll = root.closest(".board-scroll");
+  board?.classList.toggle("wide", count === STEPS);
+  if (scroll) {
+    scroll.style.setProperty("--cols", String(count));
+    scroll.style.setProperty("--cell-min", "0px");
+  }
+  if (board && count !== STEPS) board.scrollLeft = 0;
   root.innerHTML = tracks
     .map((track) => {
       const mute = seq.synth.muted[track.id] ? "muted" : "";
@@ -130,7 +128,10 @@ function renderStepNumbers() {
     <div class="steps" style="--cols:${count}">
       ${Array.from({ length: count }, (_, n) => {
         const i = start + n;
-        return `<span class="step-num ${i % 4 === 0 ? "beat" : ""}" data-step="${i}">${i + 1}</span>`;
+        const mark = i % 4 === 0 ? "beat" : "";
+        const mid = i === BAR_STEPS ? "mid" : "";
+        const label = count === STEPS && i % 4 !== 0 && i !== BAR_STEPS ? "" : String(i + 1);
+        return `<span class="step-num ${mark} ${mid}" data-step="${i}">${label}</span>`;
       }).join("")}
     </div>
   `;
@@ -228,6 +229,18 @@ function pulseEq(step) {
   });
 }
 
+function followPlayhead(step) {
+  if (step < 0 || visibleRange().count !== STEPS) return;
+  const cell = document.querySelector(`.cell.current[data-step="${step}"]`);
+  const board = document.querySelector(".board");
+  if (!cell || !board) return;
+  const cr = cell.getBoundingClientRect();
+  const br = board.getBoundingClientRect();
+  const pad = 52;
+  if (cr.right > br.right - 6) board.scrollLeft += cr.right - (br.right - 6);
+  else if (cr.left < br.left + pad) board.scrollLeft -= br.left + pad - cr.left;
+}
+
 function highlightStep(step, { skipFollow = false } = {}) {
   if (!skipFollow && step >= 0 && visibleRange().count === BAR_STEPS) {
     const needStart = Math.floor(step / BAR_STEPS) * BAR_STEPS;
@@ -242,6 +255,7 @@ function highlightStep(step, { skipFollow = false } = {}) {
   document.querySelectorAll(".step-num").forEach((n) => {
     n.classList.toggle("current", Number(n.dataset.step) === step);
   });
+  if (!skipFollow) followPlayhead(step);
 
   const cat = el("xato");
   if (!cat) return;
@@ -276,10 +290,7 @@ function syncTransport() {
 function syncBars() {
   const shown = String(Math.floor(visibleRange().start / BAR_STEPS));
   document.querySelectorAll("[data-bar]").forEach((btn) => {
-    const on =
-      viewBar === "all" && !isCompact()
-        ? btn.dataset.bar === "all"
-        : btn.dataset.bar === shown;
+    const on = viewBar === "all" ? btn.dataset.bar === "all" : btn.dataset.bar === shown;
     btn.classList.toggle("on", on);
   });
   const label = el("bar-now");
