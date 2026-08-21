@@ -502,7 +502,7 @@ footer {
   font-size: 1rem;
 }
 
-@media (max-height: 820px) {
+@media (max-height: 900px) {
   .legend, footer, .sub, .tag, .eq { display: none; }
 }
 
