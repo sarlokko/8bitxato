@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>8BITXATO — mixer chiptune</title>
+  <meta name="description" content="Componi loop 8-bit a 32 step: lead, basso, kick, snare, hat e tom. Xato balla sul beat.">
+  <meta name="theme-color" content="#7cff6b">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="site.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=1.7">
+</head>
+<body>
+  <div class="crt"></div>
+  <header class="top">
+    <div class="brand">
+      <button type="button" class="xato-wrap" id="xato-btn" title="Tocca Xato: miao!" aria-label="Tocca Xato">
+        <img id="xato" class="xato" src="favicon.svg" alt="" width="72" height="72">
+        <span id="xato-say" class="xato-say" aria-hidden="true"></span>
+      </button>
+      <div id="eq" class="eq" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <div>
+        <p class="tag">v1.7 · 32 step</p>
+        <h1>8BITXATO</h1>
+        <p class="sub">Due battute e tom. Spazio = play.</p>
+      </div>
+    </div>
+    <div class="transport">
+      <button type="button" id="play" class="play">PLAY</button>
+      <label class="bpm-wrap">
+        BPM
+        <input id="bpm" type="range" min="60" max="200" value="120">
+        <strong id="bpm-value">120</strong>
+      </label>
+      <label class="bpm-wrap">
+        SWING
+        <input id="swing" type="range" min="0" max="50" value="0">
+        <strong id="swing-value">0</strong>
+      </label>
+      <label class="bpm-wrap">
+        MASTER
+        <input id="master" type="range" min="0" max="100" value="85">
+      </label>
+    </div>
+  </header>
+
+  <div class="kits" role="radiogroup" aria-label="Sonorità 8-bit">
+    <span class="kits-label">CHIP</span>
+    <button type="button" data-kit="classico" title="Onda quadra originale">CLASSICO</button>
+    <button type="button" data-kit="nes" title="Pulse NES 25%">NES</button>
+    <button type="button" data-kit="boy" title="Pulse sottile tipo Game Boy">BOY</button>
+    <button type="button" data-kit="sala" title="Arcade, più aggressivo">SALA</button>
+    <button type="button" data-kit="notte" title="Triangolo morbido">NOTTE</button>
+  </div>
+
+  <div class="kits bars" role="radiogroup" aria-label="Battute">
+    <span class="kits-label">BARS</span>
+    <button type="button" data-bar="0">BAR 1</button>
+    <button type="button" data-bar="1">BAR 2</button>
+    <button type="button" data-bar="all" class="on">1+2</button>
+    <span id="bar-now" class="bar-now" aria-live="polite"></span>
+  </div>
+
+  <section class="toolbar">
+    <button type="button" id="undo">UNDO</button>
+    <button type="button" id="random">RANDOM</button>
+    <button type="button" id="clear">CLEAR</button>
+    <button type="button" id="duplicate">DUPLICA 8</button>
+    <button type="button" id="duplicate-bar">DUPLICA 16</button>
+    <button type="button" data-preset="boing">BOING</button>
+    <button type="button" data-preset="boss">BOSS</button>
+    <button type="button" data-preset="nanna">NANNA</button>
+    <button type="button" data-preset="miao">MIAO</button>
+    <button type="button" data-preset="rincorsa">RINCORSA</button>
+    <button type="button" id="copy-link">COPIA LINK</button>
+    <button type="button" id="export">ESPORTA</button>
+    <label class="import">
+      IMPORTA
+      <input id="import" type="file" accept="application/json,.txt">
+    </label>
+  </section>
+
+  <div class="legend">
+    <span>1+2 = le due battute attaccate. BAR 1 / BAR 2 per una alla volta.</span>
+  </div>
+
+  <div class="board">
+    <div class="board-scroll">
+      <div id="step-numbers" class="step-numbers"></div>
+      <main id="grid" class="grid"></main>
+    </div>
+  </div>
+
+  <footer>
+    <p>8BITXATO — mixer 8-bit nel browser. Il pattern si salva da solo. Xato è il gatto.</p>
+  </footer>
+
+  <script type="module" src="js/app.js?v=1.7"></script>
+</body>
+</html>

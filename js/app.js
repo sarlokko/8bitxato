@@ -1,0 +1,551 @@
+import { Sequencer, STEPS, BAR_STEPS } from "./sequencer.js";
+import { LEAD_NOTES, BASS_NOTES } from "./synth.js";
+
+const seq = new Sequencer(highlightStep);
+const tracks = [
+  { id: "lead", label: "LEAD", kind: "notes", notes: LEAD_NOTES },
+  { id: "bass", label: "BASS", kind: "notes", notes: BASS_NOTES },
+  { id: "kick", label: "KICK", kind: "drum" },
+  { id: "snare", label: "SNARE", kind: "drum" },
+  { id: "hat", label: "HAT", kind: "drum" },
+  { id: "tom", label: "TOM", kind: "drum" },
+];
+
+const DRUM_KEYS = { KeyZ: "kick", KeyX: "snare", KeyC: "hat", KeyV: "tom" };
+const LEAD_KEYS = {
+  Digit1: "C5",
+  Digit2: "A4",
+  Digit3: "G4",
+  Digit4: "E4",
+  Digit5: "D4",
+  Digit6: "C4",
+  Digit7: "A3",
+  Digit8: "G3",
+};
+
+const TRICK_CLASSES = ["trick-meow", "trick-purr", "trick-spin", "trick-solo"];
+
+let paint = null;
+let sayTimer = null;
+let viewBar = "all";
+let resizeTimer = null;
+let xatoLockUntil = 0;
+let xatoCombo = 0;
+let xatoComboTimer = null;
+let trickTimer = null;
+
+function el(id) {
+  return document.getElementById(id);
+}
+
+function visibleRange() {
+  if (viewBar === "all") return { start: 0, count: STEPS };
+  const bar = Number(viewBar) || 0;
+  return { start: bar * BAR_STEPS, count: BAR_STEPS };
+}
+
+function cellClass(step, on) {
+  const beat = step % 4 === 0 ? "beat" : "";
+  const bar = step % 8 === 0 ? "bar" : "";
+  const mid = step === BAR_STEPS ? "mid" : "";
+  return `cell ${on ? "on" : ""} ${beat} ${bar} ${mid}`.trim();
+}
+
+function renderGrid() {
+  const { start, count } = visibleRange();
+  const root = el("grid");
+  const board = root.closest(".board");
+  const scroll = root.closest(".board-scroll");
+  board?.classList.toggle("wide", count === STEPS);
+  if (scroll) {
+    scroll.style.setProperty("--cols", String(count));
+    scroll.style.setProperty("--cell-min", "0px");
+  }
+  if (board && count !== STEPS) board.scrollLeft = 0;
+  root.innerHTML = tracks
+    .map((track) => {
+      const mute = seq.synth.muted[track.id] ? "muted" : "";
+      const solo = seq.synth.solo === track.id ? "soloing" : "";
+      const dim = seq.synth.solo && seq.synth.solo !== track.id ? "solo-dim" : "";
+      const vol = Math.round(seq.synth.volumes[track.id] * 100);
+      const body =
+        track.kind === "notes"
+          ? track.notes
+              .map(
+                (note) => `
+            <div class="note-row">
+              <button type="button" class="note-name" data-preview-track="${track.id}" data-preview-note="${note}">${note}</button>
+              <div class="steps" style="--cols:${count}">
+                ${Array.from({ length: count }, (_, n) => {
+                  const i = start + n;
+                  const on = seq.pattern[track.id][i] === note;
+                  return `<button type="button" class="${cellClass(i, on)}" data-track="${track.id}" data-step="${i}" data-note="${note}"></button>`;
+                }).join("")}
+              </div>
+            </div>`
+              )
+              .join("")
+          : `<div class="note-row drum-row">
+              <button type="button" class="note-name" data-preview-track="${track.id}">●</button>
+              <div class="steps" style="--cols:${count}">
+                ${Array.from({ length: count }, (_, n) => {
+                  const i = start + n;
+                  const on = seq.pattern[track.id][i];
+                  return `<button type="button" class="${cellClass(i, on)} drum" data-track="${track.id}" data-step="${i}"></button>`;
+                }).join("")}
+              </div>
+            </div>`;
+
+      return `
+        <section class="track ${track.kind === "notes" ? "notes" : "drums"} ${mute} ${solo} ${dim}" data-track-panel="${track.id}">
+          <header class="track-head">
+            <h2>${track.label}</h2>
+            <label class="mute">
+              <input type="checkbox" data-mute="${track.id}" ${seq.synth.muted[track.id] ? "checked" : ""}>
+              mute
+            </label>
+            <button type="button" class="solo-btn ${seq.synth.solo === track.id ? "on" : ""}" data-solo="${track.id}">solo</button>
+            <label class="vol">
+              vol
+              <input type="range" min="0" max="100" value="${vol}" data-vol="${track.id}">
+            </label>
+          </header>
+          ${body}
+        </section>`;
+    })
+    .join("");
+
+  renderStepNumbers();
+  syncBars();
+  highlightStep(seq.playing ? seq.heardStep : -1, { skipFollow: true });
+  syncUndo();
+}
+
+function renderStepNumbers() {
+  const { start, count } = visibleRange();
+  el("step-numbers").innerHTML = `
+    <span class="note-name"></span>
+    <div class="steps" style="--cols:${count}">
+      ${Array.from({ length: count }, (_, n) => {
+        const i = start + n;
+        const mark = i % 4 === 0 ? "beat" : "";
+        const mid = i === BAR_STEPS ? "mid" : "";
+        const label = count === STEPS && i % 4 !== 0 && i !== BAR_STEPS ? "" : String(i + 1);
+        return `<span class="step-num ${mark} ${mid}" data-step="${i}">${label}</span>`;
+      }).join("")}
+    </div>
+  `;
+}
+
+function syncNoteCells(track, step) {
+  const current = seq.pattern[track][step];
+  document.querySelectorAll(`.cell[data-track="${track}"][data-step="${step}"]`).forEach((cell) => {
+    cell.classList.toggle("on", cell.dataset.note ? cell.dataset.note === current : Boolean(current));
+  });
+}
+
+function xatoSay(text, ms = 180) {
+  const bubble = el("xato-say");
+  if (!bubble) return;
+  if (ms <= 180 && Date.now() < xatoLockUntil) return;
+  bubble.textContent = text;
+  bubble.classList.add("show");
+  clearTimeout(sayTimer);
+  sayTimer = setTimeout(() => bubble.classList.remove("show"), ms);
+}
+
+function playXatoTrick(cls, ms) {
+  const cat = el("xato");
+  if (!cat) return;
+  cat.classList.remove(...TRICK_CLASSES);
+  void cat.offsetWidth;
+  cat.classList.add(cls);
+  clearTimeout(trickTimer);
+  trickTimer = setTimeout(() => cat.classList.remove(cls), ms);
+}
+
+function pokeXato() {
+  const ctx = seq.synth.ensure();
+  const t = ctx.currentTime;
+  clearTimeout(xatoComboTimer);
+  xatoCombo += 1;
+  const level = Math.min(xatoCombo, 5);
+
+  if (level === 1) {
+    seq.synth.meow(t, "miao");
+    xatoSay("MIAO", 420);
+    playXatoTrick("trick-meow", 420);
+    xatoLockUntil = Date.now() + 420;
+  } else if (level === 2) {
+    seq.synth.meow(t, "miao");
+    seq.synth.meow(t + 0.12, "ask");
+    xatoSay("MIAO?", 520);
+    playXatoTrick("trick-meow", 520);
+    xatoLockUntil = Date.now() + 520;
+  } else if (level === 3) {
+    seq.synth.purr(t);
+    xatoSay("PURR", 720);
+    playXatoTrick("trick-purr", 720);
+    xatoLockUntil = Date.now() + 720;
+  } else if (level === 4) {
+    seq.synth.meow(t, "nya");
+    seq.synth.meow(t + 0.11, "miao");
+    seq.synth.meow(t + 0.28, "ask");
+    xatoSay("NYA", 650);
+    playXatoTrick("trick-spin", 560);
+    xatoLockUntil = Date.now() + 650;
+  } else {
+    seq.synth.catSolo(t, seq.stepDuration());
+    xatoSay("SOLO!", 900);
+    playXatoTrick("trick-solo", 900);
+    xatoLockUntil = Date.now() + 900;
+    xatoCombo = 0;
+  }
+
+  xatoComboTimer = setTimeout(() => {
+    xatoCombo = 0;
+  }, 900);
+}
+
+function pulseEq(step) {
+  const eq = el("eq");
+  if (!eq) return;
+  if (step < 0) {
+    [...eq.children].forEach((bar) => {
+      bar.style.height = "5px";
+    });
+    return;
+  }
+  const p = seq.pattern;
+  const levels = [
+    p.kick[step] ? 18 : 6,
+    p.snare[step] ? 16 : 5,
+    p.hat[step] ? 12 : 4,
+    p.bass[step] ? 20 : 7,
+    p.lead[step] || p.tom[step] ? 22 : 8,
+  ];
+  [...eq.children].forEach((bar, i) => {
+    bar.style.height = `${levels[i] || 4}px`;
+  });
+}
+
+function followPlayhead(step) {
+  if (step < 0 || visibleRange().count !== STEPS) return;
+  const cell = document.querySelector(`.cell.current[data-step="${step}"]`);
+  const board = document.querySelector(".board");
+  if (!cell || !board) return;
+  const cr = cell.getBoundingClientRect();
+  const br = board.getBoundingClientRect();
+  const pad = 52;
+  if (cr.right > br.right - 6) board.scrollLeft += cr.right - (br.right - 6);
+  else if (cr.left < br.left + pad) board.scrollLeft -= br.left + pad - cr.left;
+}
+
+function highlightStep(step, { skipFollow = false } = {}) {
+  if (!skipFollow && step >= 0 && visibleRange().count === BAR_STEPS) {
+    const needStart = Math.floor(step / BAR_STEPS) * BAR_STEPS;
+    if (needStart !== visibleRange().start) {
+      renderGrid();
+      return;
+    }
+  }
+  document.querySelectorAll(".cell").forEach((cell) => {
+    cell.classList.toggle("current", Number(cell.dataset.step) === step);
+  });
+  document.querySelectorAll(".step-num").forEach((n) => {
+    n.classList.toggle("current", Number(n.dataset.step) === step);
+  });
+  if (!skipFollow) followPlayhead(step);
+
+  const cat = el("xato");
+  if (!cat) return;
+  const playing = seq.playing && step >= 0;
+  cat.classList.toggle("playing", seq.playing);
+  cat.classList.toggle("kick", playing && Boolean(seq.pattern.kick[step]));
+  cat.classList.toggle("sing", playing && Boolean(seq.pattern.lead[step]));
+  if (playing && seq.pattern.snare[step]) xatoSay("MIAU");
+  else if (playing && seq.pattern.tom[step]) xatoSay("TOM");
+  else if (playing && seq.pattern.kick[step]) xatoSay("PUM");
+  else if (playing && seq.pattern.lead[step]) xatoSay("♪");
+  if (playing) pulseEq(step);
+  else pulseEq(-1);
+  const label = el("bar-now");
+  if (label) label.textContent = playing ? `· ${Math.floor(step / BAR_STEPS) + 1}` : "";
+}
+
+function syncTransport() {
+  el("bpm").value = seq.pattern.bpm;
+  el("bpm-value").textContent = seq.pattern.bpm;
+  el("swing").value = seq.pattern.swing;
+  el("swing-value").textContent = seq.pattern.swing;
+  el("master").value = Math.round(seq.synth.masterVolume * 100);
+  el("play").textContent = seq.playing ? "STOP" : "PLAY";
+  el("play").classList.toggle("playing", seq.playing);
+  el("xato").classList.toggle("playing", seq.playing);
+  syncKits();
+  syncBars();
+  syncUndo();
+}
+
+function syncBars() {
+  const shown = String(Math.floor(visibleRange().start / BAR_STEPS));
+  document.querySelectorAll("[data-bar]").forEach((btn) => {
+    const on = viewBar === "all" ? btn.dataset.bar === "all" : btn.dataset.bar === shown;
+    btn.classList.toggle("on", on);
+  });
+  const label = el("bar-now");
+  if (label) {
+    if (seq.playing) {
+      label.textContent = `· ${Math.floor(Math.max(0, seq.heardStep) / BAR_STEPS) + 1}`;
+    } else {
+      label.textContent = "";
+    }
+  }
+}
+
+function syncKits() {
+  document.querySelectorAll("[data-kit]").forEach((btn) => {
+    btn.classList.toggle("on", btn.dataset.kit === seq.pattern.kit);
+  });
+}
+
+function syncUndo() {
+  const btn = el("undo");
+  if (btn) btn.disabled = !seq.canUndo();
+}
+
+function downloadPattern() {
+  const blob = new Blob([seq.exportJson()], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "8bitxato-pattern.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function applyPaint(cell) {
+  if (!paint || !cell) return;
+  const track = cell.dataset.track;
+  const step = Number(cell.dataset.step);
+  const note = cell.dataset.note;
+  if (paint.kind === "note") {
+    if (!note || track !== paint.track) return;
+    seq.setNote(track, step, note, paint.on ? "on" : "off");
+    syncNoteCells(track, step);
+  } else {
+    if (cell.dataset.note || track !== paint.track) return;
+    seq.setDrum(track, step, paint.on);
+    syncNoteCells(track, step);
+  }
+  if (paint.on) {
+    const key = `${track}:${step}:${note || ""}`;
+    if (paint.last !== key) {
+      seq.audition(track, note);
+      paint.last = key;
+    }
+  }
+}
+
+function cellFromPoint(x, y) {
+  const node = document.elementFromPoint(x, y);
+  return node?.closest?.(".cell") || null;
+}
+
+async function copyShareLink() {
+  const url = seq.shareUrl();
+  const btn = el("copy-link");
+  try {
+    await navigator.clipboard.writeText(url);
+    btn.textContent = "COPIATO";
+  } catch {
+    window.prompt("Copia il link:", url);
+    btn.textContent = "LINK";
+  }
+  setTimeout(() => {
+    btn.textContent = "COPIA LINK";
+  }, 1200);
+}
+
+function doUndo() {
+  if (!seq.undo()) return;
+  renderGrid();
+  syncTransport();
+}
+
+function bind() {
+  el("grid").addEventListener("pointerdown", (e) => {
+    const preview = e.target.closest("[data-preview-track]");
+    if (preview) {
+      e.preventDefault();
+      seq.audition(preview.dataset.previewTrack, preview.dataset.previewNote);
+      return;
+    }
+    const soloBtn = e.target.closest("[data-solo]");
+    if (soloBtn) {
+      seq.setSolo(soloBtn.dataset.solo);
+      renderGrid();
+      return;
+    }
+    const cell = e.target.closest(".cell");
+    if (!cell) return;
+    e.preventDefault();
+    seq.pushUndo();
+    const track = cell.dataset.track;
+    const step = Number(cell.dataset.step);
+    const note = cell.dataset.note;
+    if (note) {
+      paint = { kind: "note", track, on: seq.pattern[track][step] !== note };
+    } else {
+      paint = { kind: "drum", track, on: !seq.pattern[track][step] };
+    }
+    applyPaint(cell);
+  });
+
+  window.addEventListener("pointermove", (e) => {
+    if (!paint) return;
+    applyPaint(cellFromPoint(e.clientX, e.clientY));
+  });
+
+  window.addEventListener("pointerup", () => {
+    paint = null;
+  });
+
+  el("grid").addEventListener("input", (e) => {
+    if (e.target.dataset.vol) {
+      seq.setVolume(e.target.dataset.vol, Number(e.target.value) / 100);
+    }
+  });
+
+  el("grid").addEventListener("change", (e) => {
+    if (e.target.dataset.mute) {
+      seq.setMuted(e.target.dataset.mute, e.target.checked);
+      e.target.closest(".track").classList.toggle("muted", e.target.checked);
+    }
+  });
+
+  el("xato-btn").addEventListener("click", pokeXato);
+
+  el("play").addEventListener("click", () => {
+    if (seq.playing) seq.stop();
+    else seq.play();
+    syncTransport();
+  });
+
+  el("bpm").addEventListener("input", (e) => {
+    seq.setBpm(e.target.value);
+    syncTransport();
+  });
+
+  el("swing").addEventListener("input", (e) => {
+    seq.setSwing(e.target.value);
+    syncTransport();
+  });
+
+  el("master").addEventListener("input", (e) => {
+    seq.synth.setMaster(Number(e.target.value) / 100);
+  });
+
+  el("clear").addEventListener("click", () => {
+    seq.clear();
+    renderGrid();
+  });
+
+  el("random").addEventListener("click", () => {
+    seq.randomize();
+    renderGrid();
+    syncTransport();
+  });
+
+  el("duplicate").addEventListener("click", () => {
+    const bar = viewBar === "all" ? 0 : Number(viewBar) || 0;
+    seq.duplicate8(bar);
+    renderGrid();
+  });
+
+  el("duplicate-bar").addEventListener("click", () => {
+    seq.duplicate16();
+    renderGrid();
+  });
+
+  el("undo").addEventListener("click", doUndo);
+
+  document.querySelectorAll("[data-bar]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      viewBar = btn.dataset.bar === "all" ? "all" : Number(btn.dataset.bar);
+      renderGrid();
+    });
+  });
+
+  document.querySelectorAll("[data-kit]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      seq.setKit(btn.dataset.kit);
+      syncKits();
+      syncUndo();
+    });
+  });
+
+  document.querySelectorAll("[data-preset]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      seq.loadPreset(btn.dataset.preset);
+      renderGrid();
+      syncTransport();
+    });
+  });
+
+  el("copy-link").addEventListener("click", copyShareLink);
+  el("export").addEventListener("click", downloadPattern);
+
+  el("import").addEventListener("change", async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    seq.importJson(await file.text());
+    renderGrid();
+    syncTransport();
+    e.target.value = "";
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.code === "KeyZ") {
+      e.preventDefault();
+      doUndo();
+      return;
+    }
+    if (e.target.closest("input, textarea, button, label")) return;
+    if (e.code === "Space") {
+      e.preventDefault();
+      el("play").click();
+      return;
+    }
+    const drum = DRUM_KEYS[e.code];
+    if (drum) {
+      e.preventDefault();
+      seq.audition(drum);
+      if (seq.playing) {
+        seq.pushUndo();
+        seq.setDrum(drum, seq.heardStep, true);
+        syncNoteCells(drum, seq.heardStep);
+      }
+      return;
+    }
+    const lead = LEAD_KEYS[e.code];
+    if (lead) {
+      e.preventDefault();
+      seq.audition("lead", lead);
+      if (seq.playing) {
+        seq.pushUndo();
+        seq.setNote("lead", seq.heardStep, lead, "on");
+        syncNoteCells("lead", seq.heardStep);
+      }
+    }
+  });
+
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => renderGrid(), 80);
+  });
+}
+
+renderGrid();
+syncTransport();
+bind();
