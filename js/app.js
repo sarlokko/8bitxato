@@ -59,7 +59,7 @@ function renderGrid() {
   board?.classList.toggle("wide", count === STEPS);
   if (scroll) {
     scroll.style.setProperty("--cols", String(count));
-    scroll.style.setProperty("--cell-min", count === STEPS ? "18px" : "22px");
+    scroll.style.setProperty("--cell-min", "0px");
   }
   if (board && count !== STEPS) board.scrollLeft = 0;
   root.innerHTML = tracks
@@ -128,7 +128,10 @@ function renderStepNumbers() {
     <div class="steps" style="--cols:${count}">
       ${Array.from({ length: count }, (_, n) => {
         const i = start + n;
-        return `<span class="step-num ${i % 4 === 0 ? "beat" : ""}" data-step="${i}">${i + 1}</span>`;
+        const mark = i % 4 === 0 ? "beat" : "";
+        const mid = i === BAR_STEPS ? "mid" : "";
+        const label = count === STEPS && i % 4 !== 0 && i !== BAR_STEPS ? "" : String(i + 1);
+        return `<span class="step-num ${mark} ${mid}" data-step="${i}">${label}</span>`;
       }).join("")}
     </div>
   `;

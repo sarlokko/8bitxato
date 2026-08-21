@@ -330,9 +330,9 @@ button:disabled { opacity: 0.35; cursor: default; filter: none; }
 
 .board-scroll {
   --cols: 32;
-  --cell-min: 18px;
+  --cell-min: 0px;
+  width: 100%;
   min-width: 100%;
-  width: max(100%, calc(44px + (var(--cols) * var(--cell-min)) + ((var(--cols) - 1) * 2px)));
   min-height: 0;
   height: 100%;
   display: flex;
@@ -394,10 +394,10 @@ button:disabled { opacity: 0.35; cursor: default; filter: none; }
 
 .steps {
   display: grid;
-  grid-template-columns: repeat(var(--cols, 16), minmax(var(--cell-min, 18px), 1fr));
+  grid-template-columns: repeat(var(--cols, 16), minmax(0, 1fr));
   gap: 2px;
   flex: 1;
-  min-width: calc(var(--cols, 16) * var(--cell-min, 18px) + (var(--cols, 16) - 1) * 2px);
+  min-width: 0;
   min-height: 0;
 }
 
@@ -412,6 +412,7 @@ button:disabled { opacity: 0.35; cursor: default; filter: none; }
 }
 
 .step-num.beat { color: var(--text); }
+.step-num.mid { color: var(--xato); }
 .step-num.current { color: var(--current); }
 
 .track {
@@ -477,7 +478,7 @@ button.cell,
 .cell {
   height: 100%;
   min-height: 12px;
-  min-width: var(--cell-min, 18px);
+  min-width: 0;
   width: 100%;
   margin: 0;
   border: 1px solid #394156;
