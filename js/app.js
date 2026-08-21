@@ -99,7 +99,7 @@ function renderGrid() {
             </div>`;
 
       return `
-        <section class="track ${mute} ${solo} ${dim}" data-track-panel="${track.id}">
+        <section class="track ${track.kind === "notes" ? "notes" : "drums"} ${mute} ${solo} ${dim}" data-track-panel="${track.id}">
           <header class="track-head">
             <h2>${track.label}</h2>
             <label class="mute">
@@ -255,6 +255,8 @@ function highlightStep(step, { skipFollow = false } = {}) {
   else if (playing && seq.pattern.lead[step]) xatoSay("♪");
   if (playing) pulseEq(step);
   else pulseEq(-1);
+  const label = el("bar-now");
+  if (label) label.textContent = playing ? `· ${Math.floor(step / BAR_STEPS) + 1}` : "";
 }
 
 function syncTransport() {
@@ -282,10 +284,10 @@ function syncBars() {
   });
   const label = el("bar-now");
   if (label) {
-    if (viewBar === "all" && !isCompact()) {
-      label.textContent = seq.playing ? `1+2 · ${Math.floor(Math.max(0, seq.heardStep) / BAR_STEPS) + 1}` : "1+2";
+    if (seq.playing) {
+      label.textContent = `· ${Math.floor(Math.max(0, seq.heardStep) / BAR_STEPS) + 1}`;
     } else {
-      label.textContent = `BAR ${Number(shown) + 1}`;
+      label.textContent = "";
     }
   }
 }

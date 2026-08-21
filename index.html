@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=1.6">
 </head>
 <body>
   <div class="crt"></div>
@@ -25,7 +25,7 @@
         <span></span><span></span><span></span><span></span><span></span>
       </div>
       <div>
-        <p class="tag">v1.5 · 32 step</p>
+        <p class="tag">v1.6 · 32 step</p>
         <h1>8BITXATO</h1>
         <p class="sub">Due battute e tom. Spazio = play.</p>
       </div>
@@ -63,7 +63,7 @@
     <button type="button" data-bar="0">BAR 1</button>
     <button type="button" data-bar="1">BAR 2</button>
     <button type="button" data-bar="all" class="on">1+2</button>
-    <strong id="bar-now" class="bar-now">1+2</strong>
+    <span id="bar-now" class="bar-now" aria-live="polite"></span>
   </div>
 
   <section class="toolbar">
@@ -86,8 +86,7 @@
   </section>
 
   <div class="legend">
-    <span>Clicca Xato: miao, fusa, e al quinto tocco fa un mini solo.</span>
-    <span>Z X C V = kick snare hat tom · tutto sta in pagina, senza scorrere in basso</span>
+    <span>Clicca Xato: miao, fusa, solo. Z X C V = kick snare hat tom</span>
   </div>
 
   <div class="board">
@@ -99,6 +98,6 @@
     <p>8BITXATO — mixer 8-bit nel browser. Il pattern si salva da solo. Xato è il gatto.</p>
   </footer>
 
-  <script type="module" src="js/app.js"></script>
+  <script type="module" src="js/app.js?v=1.6"></script>
 </body>
 </html>
